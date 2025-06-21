@@ -131,7 +131,7 @@ export async function verifyPhoneNumber(phoneNumber: string, providerId: string,
     try {
         console.log(`Verifying phone: ${cleanedPhoneNumber} with provider: ${providerId} in country: ${iso2Code}`);
 
-        const response = await fetch(`/api/utilities/data/verify?phoneNumber=${cleanedPhoneNumber}&provider=${providerId}&country=${iso2Code}`);
+        const response = await fetch(`/api/utilities/airtime/verify?phoneNumber=${cleanedPhoneNumber}&provider=${providerId}&country=${iso2Code}`);
 
         if (!response.ok) {
             throw new Error(`Verification API returned status: ${response.status}`);
