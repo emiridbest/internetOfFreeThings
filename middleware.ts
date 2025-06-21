@@ -37,5 +37,7 @@ export const config = {
     '/api/:path*',
     // Match specific paths that might need CORS headers
     '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/auth.privy.io/:path*',
+    '/freethings.xyz/api'
   ],
 };
