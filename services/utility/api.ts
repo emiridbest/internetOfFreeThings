@@ -168,10 +168,10 @@ export async function getCountries() {
  * Gets operators by country code
  * @param countryCode ISO country code
  */
-export async function getOperatorsByCountry(countryCode: string, dataOnly: boolean, bundleOnly: boolean, comboOnly: boolean) {
+export async function getOperatorsByCountry(countryCode: string, dataOnly: boolean, bundleOnly: boolean) {
   try {
     // Create URL with query parameters
-    const url = `/operators/countries/${countryCode}?dataOnly=${dataOnly}&includeBundles=${bundleOnly}&includeCombos=${comboOnly}`;
+    const url = `/operators/countries/${countryCode}?dataOnly=${dataOnly}&bundleOnly=${bundleOnly}&includeTopups=true`;
     return await apiRequest(url);
   } catch (error) {
     console.error(`Error fetching operators for ${countryCode}:`, error);
@@ -217,7 +217,6 @@ export async function makeTopup(params: {
   operatorId: string;
   amount: string;
   useLocalAmount?: boolean;
-  recipientEmail?: string;
   recipientPhone: {
     country?: string;
     countryCode?: string;
@@ -235,7 +234,6 @@ export async function makeTopup(params: {
       operatorId: parseInt(params.operatorId),
       amount: params.useLocalAmount ? parseFloat(params.amount) : null,
       useLocalAmount: !!params.useLocalAmount,
-      recipientEmail: params.recipientEmail || null,
       recipientPhone: {
         countryCode: params.recipientPhone.country || params.recipientPhone.countryCode || '',
         number: params.recipientPhone.phoneNumber || params.recipientPhone.number || ''
