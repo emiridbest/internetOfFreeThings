@@ -34,13 +34,13 @@ type FreeClaimContextType = {
   isTransactionDialogOpen: boolean;
   setIsTransactionDialogOpen: (open: boolean) => void;
   setTransactionSteps: (steps: Step[]) => void;
-  setCurrentOperation: (operation: 'data' | null) => void;
+  setCurrentOperation: (operation: 'airtime' | null) => void;
   isWaitingTx: boolean;
   setIsWaitingTx: (waiting: boolean) => void;
   closeTransactionDialog: () => void;
-  openTransactionDialog: (operation: 'data', recipientValue: string) => void;
+  openTransactionDialog: (operation: 'airtime', recipientValue: string) => void;
   transactionSteps: Step[];
-  currentOperation: "data" | null;
+  currentOperation: "airtime" | null;
   updateStepStatus: (stepId: string, status: StepStatus, errorMessage?: string) => void;
 };
 
@@ -261,7 +261,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [transactionSteps, setTransactionSteps] = useState<Step[]>([]);
-  const [currentOperation, setCurrentOperation] = useState<'data' | null>(null);
+  const [currentOperation, setCurrentOperation] = useState<'airtime' | null>(null);
   const [isWaitingTx, setIsWaitingTx] = useState(false);
 
   // Computed property for connection status
@@ -284,23 +284,23 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     setIsWaitingTx(false);
   };
 
-  const openTransactionDialog = (operation: 'data', recipientValue: string) => {
+  const openTransactionDialog = (operation: 'airtime', recipientValue: string) => {
     setCurrentOperation(operation);
     setIsTransactionDialogOpen(true);
     // Initialize steps based on operation
-    if (operation === 'data') {
+    if (operation === 'airtime') {
       setTransactionSteps([
         {
           id: 'whitelist', title: 'Whitelist Address', status: 'inactive',
-          description: 'Whitelist your address to be eligible for the data bundle.'
+          description: 'Whitelist your address to be eligible for the airtime bundle.'
         },
         {
           id: 'attestation', title: 'Submit Attestation', status: 'inactive',
           description: 'Verify your identity by submitting an attestation.'
         },
         {
-          id: 'claim-ubi', title: 'Claim Data Bundle', status: 'inactive',
-          description: 'Claim your free data bundle once all prerequisites are met.'
+          id: 'claim-ubi', title: 'Claim airtime Bundle', status: 'inactive',
+          description: 'Claim your free airtime bundle once all prerequisites are met.'
         }
       ]);
     }
@@ -308,8 +308,8 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
 
   const getDialogTitle = () => {
     switch (currentOperation) {
-      case 'data':
-        return 'Claim Free Data Bundle';
+      case 'airtime':
+        return 'Claim Free airtime Bundle';
       default:
         return 'Transaction';
     }
@@ -377,7 +377,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     try {
       updateStepStatus('attestation', 'loading');
       setIsProcessing(true);
-      const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free data bundle.`;
+      const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free airtime bundle.`;
       const result = await submitAttestation( attestationText, smartAccount);
 
       if (result.success) {
@@ -422,14 +422,14 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       const result = await claimBundle(smartAccount);
 
       if (result?.success) {
-        toast.success("Successfully claimed your free data bundle!");
+        toast.success("Successfully claimed your free airtime bundle!");
         updateStepStatus('claim-ubi', 'success');
       } else if (result?.isClaimTooSoonError) {
         toast.error("You must wait before claiming again");
         updateStepStatus('claim-ubi', 'error', "You must wait before claiming again");
       } else {
-        toast.error("Failed to claim data bundle");
-        updateStepStatus('claim-ubi', 'error', "Failed to claim data bundle");
+        toast.error("Failed to claim airtime bundle");
+        updateStepStatus('claim-ubi', 'error', "Failed to claim airtime bundle");
       }
     } catch (error) {
       console.error("Error claiming bundle:", error);
@@ -471,7 +471,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
           <DialogHeader>
             <DialogTitle className='text-black/90 dark:text-white/90'>{getDialogTitle()}</DialogTitle>
             <DialogDescription>
-              {currentOperation === 'data' && "Complete the steps below to claim your free data bundle."}
+              {currentOperation === 'airtime' && "Complete the steps below to claim your free airtime bundle."}
             </DialogDescription>
           </DialogHeader>
 
