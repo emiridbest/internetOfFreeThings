@@ -57,7 +57,9 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   
   // RPC URLs with fallbacks
   const RPC_URLS = [
-    process.env.NEXT_PUBLIC_RPC_URL!
+    process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+    "https://rpc.ankr.com/lisk",
+    "https://eth-mainnet.g.alchemy.com/v2/demo",
   ];
   
   const [currentRpcUrl, setCurrentRpcUrl] = useState<string>(RPC_URLS[0]);
@@ -173,9 +175,11 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       const ethersSigner = ethersProvider.getSigner();
       
       // Set proper defaults for Smart Account creation
-      const biconomyBundlerUrl = process.env.NEXT_PUBLIC_BICONOMY_BUNDLER_URL!;
+      const biconomyBundlerUrl = process.env.NEXT_PUBLIC_BICONOMY_BUNDLER_URL || 
+                              "https://bundler.biconomy.io/api/v2/86757"; // Default Lisk bundler URL
       
-      const biconomyPaymasterUrl = process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_KEY!; 
+      const biconomyPaymasterUrl = process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_URL || 
+                               "https://paymaster.biconomy.io/api/v1/86757/bYpxUXgz8.f0090d61-2898-4039-9cd9-3dda9517eb46"; // Default Lisk paymaster URL
 
       console.log("Creating smart account with:", {
         bundlerUrl: biconomyBundlerUrl,
@@ -338,7 +342,8 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       updateStepStatus('whitelist', 'loading');
       setIsProcessing(true);
 
-      const result = await whitelistSelf(smartAccount.accountAddress as `0x${string}`, smartAccount);
+      const result = await whitelistSelf(address as `0x${string}`, smartAccount);
+
       if (result.success) {
         toast.success("Successfully added to whitelist!");
         updateStepStatus('whitelist', 'success');
@@ -377,8 +382,9 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     try {
       updateStepStatus('attestation', 'loading');
       setIsProcessing(true);
-      const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free data bundle.`;
-      const result = await submitAttestation( attestationText, smartAccount);
+
+      const attestationText = "I verify I am a unique individual claiming a free data bundle.";
+      const result = await submitAttestation(attestationText, smartAccount);
 
       if (result.success) {
         toast.success("Successfully completed attestation!");

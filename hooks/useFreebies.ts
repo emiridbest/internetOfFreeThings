@@ -1,7 +1,6 @@
-// hooks/useFreebiesLogic.js
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
 import { toast } from 'sonner';
+import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,8 +36,29 @@ const formSchema = z.object({
 });
 
 export const useFreebiesLogic = () => {
-    const { address, isConnected } = useAccount();
-    
+    const { user, authenticated } = usePrivy();
+    const { wallets } = useWallets();
+    const [address, setAddress] = useState<string | null>(null);
+    const isConnected = authenticated && !!address;
+
+    useEffect(() => {
+        const getWalletAddress = async () => {
+            const embeddedWallet = wallets?.find((wallet) => wallet.walletClientType === 'privy');
+            if (embeddedWallet) {
+                try {
+                    const walletAddress = await embeddedWallet.address;
+                    setAddress(walletAddress);
+                } catch (error) {
+                    console.error("Error getting wallet address:", error);
+                }
+            }
+        };
+
+        if (authenticated && wallets?.length > 0) {
+            getWalletAddress();
+        }
+    }, [authenticated, wallets]);
+
     // Updated to use the correct context hook
     const {
         updateStepStatus,
@@ -46,11 +66,7 @@ export const useFreebiesLogic = () => {
         isProcessing,
         handleClaim,
         handleWhitelist,
-        handleAttest,
-        isWhitelisted: contractIsWhitelisted,
-        hasAttested: contractHasAttested,
-        canClaim: contractCanClaim,
-        timeUntilNextClaim: contractTimeRemaining,
+        handleAttest
         // Note: processDataTopUp and processPayment might need to be added to the context
         // or implemented separately
     } = useFreeClaimProcessor();
@@ -61,13 +77,9 @@ export const useFreebiesLogic = () => {
     const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null);
     const [availablePlans, setAvailablePlans] = useState<DataPlan[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [timeRemaining, setTimeRemaining] = useState<string>(contractTimeRemaining || "");
-    const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
     const [networks, setNetworks] = useState<NetworkOperator[]>([]);
-    const [canClaimToday, setCanClaimToday] = useState<boolean>(contractCanClaim || true);
     const [isVerifying, setIsVerifying] = useState<boolean>(false);
     const [isVerified, setIsVerified] = useState<boolean>(false);
-    const [isWhitelisted, setIsWhitelisted] = useState<boolean | undefined>(contractIsWhitelisted);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -83,17 +95,6 @@ export const useFreebiesLogic = () => {
 
     const watchCountry = form.watch("country");
     const watchNetwork = form.watch("network");
-
-    // Sync with contract time remaining
-    useEffect(() => {
-        setTimeRemaining(contractTimeRemaining || "");
-    }, [contractTimeRemaining]);
-
-    // Sync with contract states
-    useEffect(() => {
-        setIsWhitelisted(contractIsWhitelisted);
-        setCanClaimToday(contractCanClaim || true);
-    }, [contractIsWhitelisted, contractCanClaim]);
 
     // Function to set country currency
     const setCountryCurrency = (country: string) => {
@@ -118,9 +119,9 @@ export const useFreebiesLogic = () => {
 
                     const operators: NetworkOperator[] = await response.json();
                     // Filter out MTN Nigeria extra data
-                    const filteredOperators = operators.filter(operator => 
+                    const filteredOperators = operators.filter(operator =>
                         !(operator.name.toLowerCase().includes('mtn nigeria extra data') ||
-                        (operator.name.toLowerCase().includes('smile uganda data')))
+                            (operator.name.toLowerCase().includes('smile uganda data')))
                     );
                     setNetworks(filteredOperators);
                 } catch (error) {
@@ -161,55 +162,7 @@ export const useFreebiesLogic = () => {
         getDataPlans();
     }, [watchNetwork, watchCountry, form]);
 
-    // Local claim check (12-hour cooldown) - separate from contract cooldown
-    useEffect(() => {
-        const checkLastClaim = () => {
-            if (typeof window === 'undefined') return true;
-            
-            const lastClaim = localStorage.getItem('lastFreeClaim');
-            if (!lastClaim) return true;
-            
-            const lastClaimTime = new Date(lastClaim);
-            const now = new Date();
-            const timeDiff = now.getTime() - lastClaimTime.getTime();
-            const hoursDiff = timeDiff / (1000 * 60 * 60);
-            
-            // 12-hour cooldown
-            if (hoursDiff < 12) {
-                const nextClaim = new Date(lastClaimTime.getTime() + (12 * 60 * 60 * 1000));
-                setNextClaimTime(nextClaim);
-                return false;
-            }
-            return true;
-        };
 
-        const canClaimLocally = checkLastClaim();
-        setCanClaimToday(canClaimLocally && contractCanClaim);
-    }, [contractCanClaim]);
-
-    // Timer for countdown
-    useEffect(() => {
-        if (!nextClaimTime) return;
-
-        const timer = setInterval(() => {
-            const now = new Date();
-            const diff = nextClaimTime.getTime() - now.getTime();
-
-            if (diff <= 0) {
-                setTimeRemaining("Available now!");
-                setCanClaimToday(contractCanClaim);
-                setNextClaimTime(null);
-                clearInterval(timer);
-            } else {
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
-            }
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [nextClaimTime, contractCanClaim]);
 
     // Placeholder functions for data processing (you'll need to implement these or add to context)
     const processDataTopUp = async (
@@ -218,45 +171,52 @@ export const useFreebiesLogic = () => {
         plans: DataPlan[],
         networks: { id: string; name: string }[]
     ) => {
-        // This should be implemented in your context or as a separate service
         console.log("Processing data top-up:", { data, price, plans, networks });
-        // Placeholder - replace with actual implementation
         return { success: true };
     };
 
-    // Handle claim bundle logic - Updated to work with FreeClaimProvider
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        // Early return if already processing to prevent race conditions
-        if (isProcessing || isClaiming || !canClaimToday) {
+        if (isProcessing || isClaiming) {
             console.log("Already processing, ignoring duplicate submission");
             return;
         }
-
-        // Check localStorage before starting process
-        const checkCanClaim = () => {
-            if (typeof window === 'undefined') return true; // SSR check
-            const lastClaim = localStorage.getItem('lastFreeClaim');
-            if (!lastClaim) return true;
-            
-            const lastClaimTime = new Date(lastClaim);
-            const now = new Date();
-            const timeDiff = now.getTime() - lastClaimTime.getTime();
-            const hoursDiff = timeDiff / (1000 * 60 * 60);
-            
-            return hoursDiff >= 12; // 12-hour cooldown
-        };
-
-        if (!checkCanClaim()) {
-            toast.error("You have already claimed your free data bundle recently. Please wait 12 hours between claims.");
-            return;
-        }
-
-        // Generate unique transaction ID for idempotency
         const transactionId = `${address}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         setIsClaiming(true);
         let hasClaimedSuccessfully = false;
-        
+        try {
+            await handleClaim()
+        } catch (error) {
+            console.error("Error in handleClaim:", error);
+            toast.error("Failed to initiate claim process. Please try again.");
+            setIsClaiming(false);
+            return;
+        }
+        setTimeout(() => {
+        }
+            , 5000);
+        try {
+            await handleWhitelist()
+        } catch (error) {
+            console.error("Error in handleWhitelist:", error);
+            toast.error("Failed to initiate whitelist process. Please try again.");
+            setIsClaiming(false);
+            return;
+        }
+        setTimeout(() => {
+        }
+            , 5000);
+        try {
+            await handleAttest()
+        } catch (error) {
+            console.error("Error in handleAttest:", error);
+            toast.error("Failed to initiate attestation process. Please try again.");
+            setIsClaiming(false);
+            return;
+        }
+        setTimeout(() => {
+        }
+            , 5000);
         try {
             const phoneNumber = values.phoneNumber;
             const country = values.country;
@@ -269,12 +229,12 @@ export const useFreebiesLogic = () => {
                 toast.error("Please connect your wallet");
                 return;
             }
-            
+
             if (!selectedPlan) {
                 toast.error("Please select a data plan");
                 return;
             }
-            
+
             if (!phoneNumber) {
                 toast.error("Please enter your phone number");
                 return;
@@ -296,10 +256,10 @@ export const useFreebiesLogic = () => {
             try {
                 // Open the transaction dialog with proper steps
                 openTransactionDialog('data', phoneNumber);
-                
+
                 // Initialize transaction steps for the free claim process
                 updateStepStatus('verify-phone', 'loading');
-                
+
                 const verificationResult = await verifyAndSwitchProvider(phoneNumber, networkId, country);
 
                 if (!verificationResult || !verificationResult.verified) {
@@ -312,7 +272,7 @@ export const useFreebiesLogic = () => {
                 setIsVerified(true);
                 toast.success("Phone number verified successfully");
                 updateStepStatus('verify-phone', 'success');
-                
+
                 if (verificationResult.autoSwitched && verificationResult.correctProviderId) {
                     form.setValue('network', verificationResult.correctProviderId);
                     toast.success(verificationResult.message || "Network provider switched successfully");
@@ -331,32 +291,30 @@ export const useFreebiesLogic = () => {
                         return;
                     }
                 }
-                
+
                 // Step 1: Whitelist if not whitelisted
-                if (!contractIsWhitelisted) {
-                    updateStepStatus('whitelist', 'loading');
-                    try {
-                        await handleWhitelist();
-                        // Wait a moment for the state to update
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    } catch (whitelistError) {
-                        console.error("Whitelist error:", whitelistError);
-                        return;
-                    }
+                updateStepStatus('whitelist', 'loading');
+                try {
+                    await handleWhitelist();
+                    // Wait a moment for the state to update
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (whitelistError) {
+                    console.error("Whitelist error:", whitelistError);
+                    return;
                 }
-                
+
+
                 // Step 2: Attest if not attested
-                if (!contractHasAttested) {
-                    updateStepStatus('attestation', 'loading');
-                    try {
-                        await handleAttest();
-                        // Wait a moment for the state to update
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    } catch (attestError) {
-                        console.error("Attestation error:", attestError);
-                        return;
-                    }
+                updateStepStatus('attestation', 'loading');
+                try {
+                    await handleAttest();
+                    // Wait a moment for the state to update
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (attestError) {
+                    console.error("Attestation error:", attestError);
+                    return;
                 }
+
 
                 // Step 3: Claim bundle
                 updateStepStatus('claim-ubi', 'loading');
@@ -373,7 +331,7 @@ export const useFreebiesLogic = () => {
                 // Process data top-up
                 try {
                     const selectedPrice = parseFloat(selectedPlan.price.replace(/[^0-9.]/g, ''));
-                    
+
                     // Validate parsed price
                     if (isNaN(selectedPrice) || selectedPrice <= 0) {
                         throw new Error("Invalid plan price");
@@ -381,7 +339,7 @@ export const useFreebiesLogic = () => {
 
                     const networks = [{ id: networkId, name: 'Network' }];
                     updateStepStatus('top-up', 'loading');
-                    
+
                     const topupResult = await processDataTopUp(
                         {
                             phoneNumber,
@@ -401,20 +359,15 @@ export const useFreebiesLogic = () => {
                             localStorage.setItem('lastFreeClaim', new Date().toISOString());
                             localStorage.removeItem('processingClaim');
                         }
-                        
-                        setCanClaimToday(false);
+
                         setSelectedPlan(null);
                         updateStepStatus('top-up', 'success');
-                        form.reset();
+                        //   form.reset();
                         toast.success("Data bundle topped up successfully! You can claim again in 12 hours.", {
                             duration: 10000,
                             description: "Your mobile data will be credited shortly"
                         });
-                        
-                        // Set next claim time
-                        const nextClaim = new Date();
-                        nextClaim.setHours(nextClaim.getHours() + 12);
-                        setNextClaimTime(nextClaim);
+
                     } else {
                         throw new Error("Top-up failed - no success confirmation received");
                     }
@@ -422,11 +375,11 @@ export const useFreebiesLogic = () => {
                     console.error("Top-up failed:", topupError);
                     toast.error("Failed to top up your data bundle. Please try again.");
                     updateStepStatus('top-up', 'error', "An error occurred during the top-up process.");
-                    
+
                     if (hasClaimedSuccessfully) {
                         toast.error("Claim succeeded but top-up failed. Please contact support.");
                     }
-                    
+
                     throw topupError;
                 }
 
@@ -440,7 +393,7 @@ export const useFreebiesLogic = () => {
             }
         } catch (error) {
             console.error("Error in submission flow:", error);
-            
+
             // Clean up localStorage on any error
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('processingClaim');
@@ -448,19 +401,19 @@ export const useFreebiesLogic = () => {
                     localStorage.removeItem('lastFreeClaim');
                 }
             }
-            
+
             const errorMessage = error instanceof Error ? error.message : "There was an unexpected error processing your request.";
             toast.error(errorMessage);
-            
+
         } finally {
             // Always clean up states
             setIsClaiming(false);
             setIsVerifying(false);
-            
+
             // Clean up processing flag
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('processingClaim');
-                
+
                 if (!hasClaimedSuccessfully) {
                     setTimeout(() => {
                         toast.info("You can try claiming again. If problems persist, please check your connection and wallet balance.", {
@@ -486,10 +439,6 @@ export const useFreebiesLogic = () => {
         isLoading,
         isVerifying,
         isVerified,
-        isWhitelisted,
-        canClaimToday,
-        timeRemaining,
-        contractHasAttested,
 
         // Data
         networks,
@@ -500,7 +449,7 @@ export const useFreebiesLogic = () => {
         setCountryCurrency,
         onSubmit,
         handleWhitelist,
-        handleAttest, 
+        handleAttest,
         handleClaim
     };
 };
