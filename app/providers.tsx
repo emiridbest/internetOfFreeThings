@@ -11,12 +11,14 @@ export default function AppProvider({ children }: { children: ReactNode }) {
 
   return (
       <PrivyProvider
-        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}        config={{
+        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}    
+        
+        config={{
           loginMethods: ['email', 'wallet'],
           appearance: {
             theme: 'light',
             accentColor: '#676FFF',
-            logo: '/public/logo.svg'
+            logo: '/public/logos/privy-logo.png',
           },
           embeddedWallets: {
             createOnLogin: "users-without-wallets",
