@@ -99,7 +99,6 @@ export const useFreebiesLogic = () => {
             phoneNumber: "",
             network: "",
             amount: "",
-            email: "",
         },
     });
 
