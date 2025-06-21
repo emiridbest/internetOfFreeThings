@@ -11,7 +11,7 @@ interface OperatorDetails {
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const provider = searchParams.get('provider');
-    const country = searchParams.get('country');
+    const  = searchParams.get('country');
     if (!provider || !country) {
         return NextResponse.json({ error: 'Provider ID and country code are required' }, { status: 400 });
     }
