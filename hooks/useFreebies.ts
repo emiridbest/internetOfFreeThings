@@ -14,9 +14,6 @@ import {
 
 // Updated form schema - removed paymentToken since it's free
 const formSchema = z.object({
-  country: z.string({
-    required_error: "Please select a country.",
-  }),
   phoneNumber: z.string()
     .min(10, { message: "Phone number must be at least 10 digits." })
     .refine(val => /^\d+$/.test(val.replace(/[\s-]/g, '')), {
@@ -30,9 +27,7 @@ const formSchema = z.object({
     .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
       message: "Amount must be a valid positive number."
     }),
-  email: z.string().email({
-    message: "Invalid email address.",
-  })
+
 });
 
 interface OperatorRange {
@@ -95,7 +90,6 @@ export const useFreebiesLogic = () => {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            country: "ng", // Default to Nigeria
             phoneNumber: "",
             network: "",
             amount: "",
@@ -258,10 +252,9 @@ export const useFreebiesLogic = () => {
             setIsVerifying(true);
             try {
                 const phoneNumber = values.phoneNumber;
-                const country = values.country;
                 const provider = values.network;
                 
-                if (!phoneNumber || !country || !provider) {
+                if (!phoneNumber || !provider) {
                     toast.error("Please ensure all fields are filled out correctly.");
                     throw new Error("Please ensure all fields are filled out correctly.");
                 }
@@ -269,7 +262,7 @@ export const useFreebiesLogic = () => {
                 openTransactionDialog("airtime", values.phoneNumber);
                 updateStepStatus('verify-phone', 'loading');
 
-                const verificationResult = await verifyAndSwitchProvider(phoneNumber, provider, country);
+                const verificationResult = await verifyAndSwitchProvider(phoneNumber, provider, "ng");
 
                 if (verificationResult.verified) {
                     setIsVerified(true);
@@ -320,10 +313,9 @@ export const useFreebiesLogic = () => {
                         amount: enteredAmount.toString(),
                         useLocalAmount: true,
                         recipientPhone: {
-                            country: values.country,
+                            country: "ng",
                             phoneNumber: cleanPhoneNumber
                         },
-                        email: values.email,
                         type: 'airtime',
                         isFreeClaim: true // Flag to indicate this is a free claim
                     }),
@@ -337,11 +329,9 @@ export const useFreebiesLogic = () => {
 
                     // Reset the form but keep some values
                     form.reset({
-                        country: "ng",
                         phoneNumber: "",
                         network: "",
                         amount: "",
-                        email: values.email,
                     });
                     setSelectedPrice(0);
                 } else {
