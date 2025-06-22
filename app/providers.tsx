@@ -18,10 +18,10 @@ export default function AppProvider({ children }: { children: ReactNode }) {
           appearance: {
             theme: 'light',
             accentColor: '#676FFF',
-            logo: '/public/logos/privy-logo.png',
+            logo: 'https://github.com/emiridbest/internetOfFreeThings/blob/main/public/logo.svg',
           },
           embeddedWallets: {
-            createOnLogin: "users-without-wallets",
+            createOnLogin: "all-users",
           },
           defaultChain: lisk,
           supportedChains: [lisk],

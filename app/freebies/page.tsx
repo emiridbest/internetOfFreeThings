@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { useFreebiesLogic } from '@/hooks/useFreebies';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
-import { useEffect, Suspense } from 'react'; 
+import { useEffect, Suspense } from 'react';
 
 // Create a component for the form content to wrap in Suspense
 function FreebiesFormContent() {
@@ -81,6 +81,9 @@ function FreebiesFormContent() {
                                     </p>
                                     <p className="text-sm text-black/80 dark:text-green-200">
                                         Get 50-60 NGN worth of airtime absolutely free!
+                                    </p>
+                                    <p className="text-xs text-black/80 dark:text-green-200">
+                                        All transaction are sponsored on the Lisk network!
                                     </p>
                                 </div>
 
@@ -279,7 +282,7 @@ function FreebiesFormContent() {
 export default function Freebies() {
     const { authenticated, user } = usePrivy();
     const router = useRouter();
-    
+
     // Redirect to login page if not authenticated
     useEffect(() => {
         if (!authenticated) {
