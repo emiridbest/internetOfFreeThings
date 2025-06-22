@@ -296,7 +296,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
         },
         {
           id: 'attestation', title: 'Submit Attestation', status: 'inactive',
-          description: 'Verify your identity by submitting an attestation.'
+          description: 'Verify your phone.'
         },
         {
           id: 'claim-ubi', title: 'Claim airtime Bundle', status: 'inactive',
