@@ -3,18 +3,26 @@ import Portal from "@/components/graphics/portal";
 import { useLogin } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { usePrivy } from "@privy-io/react-auth";
-import { useTokenVerification } from "@/hooks/useTokenVerification";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { ready } = usePrivy();
   const { login } = useLogin({
     onComplete: () => router.push("/freebies"),
   });
-  const { verificationResult } = useTokenVerification();
 
-  // No verification or redirect needed
+  // Check for authentication on client side
+  useEffect(() => {
+    // Check if there's a cookie token in the client-side
+    const checkAuthStatus = async () => {
+      // You can use localStorage or document.cookie to check if the user is authenticated
+      const isAuthenticated = document.cookie.includes('privy-token');
+      if (isAuthenticated) {
+        router.push("/freebies");
+      }
+    };
+
+    checkAuthStatus();
+  }, [router]);
 
   return (
     <main className="flex min-h-screen min-w-full">
@@ -22,10 +30,11 @@ export default function LoginPage() {
         <div>
           <div>
             <Portal style={{ maxWidth: "100%", height: "auto" }} />
-          </div>          <div className="mt-6 flex justify-center text-center">
+          </div>
+          <div className="mt-6 flex justify-center text-center">
             <button
               className="bg-violet-600 hover:bg-violet-700 py-3 px-6 text-white rounded-lg"
-              onClick={() => { if(verificationResult) login(); } }
+              onClick={login}
             >
               Log in
             </button>
