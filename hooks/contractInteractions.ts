@@ -2,9 +2,9 @@ import { createPublicClient, http, getContract, createWalletClient } from 'viem'
 import { lisk } from 'viem/chains';
 import { FreeDataBundleABI } from '../lib/FreeDataBundleABI';
 import { ethers } from 'ethers';
-import { createSmartAccountClient, PaymasterMode } from "@biconomy/account";
 const FREE_DATA_BUNDLE_ADDRESS = "0xfddbdb5bf0a70cb072535efad09ce0b5113c54c7" //'0x94a5d82a2d3561e0df469a4fcf6538c462bc1243';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
+
 // Setup RPC URL with fallbacks in case the primary URL fails
 // This avoids the "net::ERR_NAME_NOT_RESOLVED" error
 const RPC_URLS = [
@@ -28,8 +28,6 @@ export const getSignerFromPrivyWallet = async (privyWallet: any) => {
     throw error;
   }
 };
-
-
 
 // Try to find a working RPC URL and update the default if needed
 export const findWorkingRpcUrl = async (): Promise<string> => {
@@ -164,30 +162,31 @@ export const getUserStatus = async (userAddress: `0x${string}`) => {
   }
 };
 
-// FIXED: Modified to accept wallet parameter instead of using hooks
-// Whitelist self using Biconomy gasless transaction
-export const whitelistSelf = async (address: `0x${string}`, smartAccount: any) => {
+// Whitelist self using embedded wallet
+export const whitelistSelf = async (address: `0x${string}`, privyWallet: any) => {
   try {
-    if (!smartAccount || !address) {
+    if (!privyWallet || !address) {
       return {
         success: false,
-        error: new Error("Smart account or address not initialized")
+        error: new Error("Privy wallet or address not provided")
       };
     }
 
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
+    
     // Generate referral tag
     const referralTag = getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
-    // Initialize an ethers JsonRpcProvider for your network
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
 
-    // Initialize an ethers contract instance
-    const contract = new ethers.Contract(FREE_DATA_BUNDLE_ADDRESS, FreeDataBundleABI, provider);
+    // Get signer from Privy wallet
+    const signer = await getSignerFromPrivyWallet(privyWallet);
+
+    // Initialize an ethers contract instance with signer
+    const contract = new ethers.Contract(FREE_DATA_BUNDLE_ADDRESS, FreeDataBundleABI, signer);
 
     // Get the function data for whitelistSelf directly using the interface
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
@@ -196,36 +195,31 @@ export const whitelistSelf = async (address: `0x${string}`, smartAccount: any) =
     // Append referral tag to the contract call data
     const dataWithReferral = functionData + referralTag;
 
-    // Construct transaction for smart account
-    const whitelistTx = {
+    // Send transaction using embedded wallet
+    const tx = await signer.sendTransaction({
       to: FREE_DATA_BUNDLE_ADDRESS,
-      data: dataWithReferral
-    };
-
-    // Send transaction to mempool gaslessly
-    const userOpResponse = await smartAccount.sendTransaction(whitelistTx, {
-      paymasterServiceData: { mode: PaymasterMode.SPONSORED }
+      data: dataWithReferral,
+      gasLimit: ethers.utils.hexlify(500000), // Set appropriate gas limit
     });
 
-    const { transactionHash } = await userOpResponse.waitForTxHash();
-    console.log('Transaction Hash', transactionHash);
+    console.log('Transaction Hash', tx.hash);
 
-    const userOpReceipt = await userOpResponse.wait();
+    // Wait for transaction to be mined
+    const receipt = await tx.wait();
 
-    if (userOpReceipt.success === 'true') {
-      console.log('UserOp receipt', userOpReceipt);
-      console.log('Transaction receipt', userOpReceipt.receipt);
+    if (receipt.status === 1) {
+      console.log('Transaction receipt', receipt);
 
       // Submit referral to Divvi
       await submitReferral({
-        txHash: transactionHash as `0x${string}`,
+        txHash: tx.hash as `0x${string}`,
         chainId: lisk.id,
       });
 
       return {
         success: true,
-        hash: transactionHash,
-        receipt: userOpReceipt
+        hash: tx.hash,
+        receipt: receipt
       };
     } else {
       throw new Error('Transaction failed');
@@ -239,58 +233,58 @@ export const whitelistSelf = async (address: `0x${string}`, smartAccount: any) =
   }
 };
 
-// FIXED: Modified to accept wallet parameter
-// Submit attestation using Biconomy gasless transaction
-export const submitAttestation = async (attestationText: any, address: `0x${string}`, smartAccount: any) => {
+// Submit attestation using embedded wallet
+export const submitAttestation = async (attestationText: any, address: `0x${string}`, privyWallet: any) => {
   try {
-    if (!smartAccount) {
+    if (!privyWallet) {
       return {
         success: false,
-        error: new Error("Smart account not initialized")
+        error: new Error("Privy wallet not provided")
       };
     }
 
     // Try to find a working RPC URL first
-    await findWorkingRpcUrl();    // Initialize an ethers JsonRpcProvider for your network
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    await findWorkingRpcUrl();
+    
+    // Generate referral tag
     const referralTag = getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
+
+    // Get signer from Privy wallet
+    const signer = await getSignerFromPrivyWallet(privyWallet);
+
     // Get the function data for attest directly using the interface
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('attest', [attestationText]);
 
-    // Construct transaction for smart account
-    const attestTx = {
+    // Send transaction using embedded wallet
+    const tx = await signer.sendTransaction({
       to: FREE_DATA_BUNDLE_ADDRESS,
-      data: functionData + referralTag // Append referral tag to the data
-    };
-
-    // Send transaction to mempool gaslessly
-    const userOpResponse = await smartAccount.sendTransaction(attestTx, {
-      paymasterServiceData: { mode: PaymasterMode.SPONSORED }
+      data: functionData + referralTag, // Append referral tag to the data
+      gasLimit: ethers.utils.hexlify(500000), // Set appropriate gas limit
     });
 
-    const { transactionHash } = await userOpResponse.waitForTxHash();
-    console.log('Transaction Hash', transactionHash);
+    console.log('Transaction Hash', tx.hash);
 
-    const userOpReceipt = await userOpResponse.wait();
+    // Wait for transaction to be mined
+    const receipt = await tx.wait();
 
-    if (userOpReceipt.success === 'true') {
-      console.log('UserOp receipt', userOpReceipt);
-      console.log('Transaction receipt', userOpReceipt.receipt);
+    if (receipt.status === 1) {
+      console.log('Transaction receipt', receipt);
+      
       // Submit referral to Divvi
       await submitReferral({
-        txHash: transactionHash as `0x${string}`,
+        txHash: tx.hash as `0x${string}`,
         chainId: lisk.id,
       });
 
       return {
         success: true,
-        hash: transactionHash,
-        receipt: userOpReceipt
+        hash: tx.hash,
+        receipt: receipt
       };
     } else {
       throw new Error('Transaction failed');
@@ -304,59 +298,58 @@ export const submitAttestation = async (attestationText: any, address: `0x${stri
   }
 };
 
-// FIXED: Modified to accept wallet parameter and smart account
-// Claim bundle using Biconomy gasless transaction
-export const claimBundle = async (address: `0x${string}`, smartAccount: any) => {
+// Claim bundle using embedded wallet
+export const claimBundle = async (address: `0x${string}`, privyWallet: any) => {
   try {
-    if (!smartAccount) {
+    if (!privyWallet) {
       return {
         success: false,
-        error: new Error("Smart account not initialized")
+        error: new Error("Privy wallet not provided")
       };
     }
 
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
-    // Initialize an ethers JsonRpcProvider for your network
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    
+    // Generate referral tag
     const referralTag = getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
+
+    // Get signer from Privy wallet
+    const signer = await getSignerFromPrivyWallet(privyWallet);
+
     // Get the function data for claim directly using the interface
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('claim', []);
 
-    // Construct transaction for smart account
-    const claimTx = {
+    // Send transaction using embedded wallet
+    const tx = await signer.sendTransaction({
       to: FREE_DATA_BUNDLE_ADDRESS,
-      data: functionData + referralTag // Append referral tag to the data
-    };
-
-    // Send transaction to mempool gaslessly
-    const userOpResponse = await smartAccount.sendTransaction(claimTx, {
-      paymasterServiceData: { mode: PaymasterMode.SPONSORED }
+      data: functionData + referralTag, // Append referral tag to the data
+      gasLimit: ethers.utils.hexlify(500000), // Set appropriate gas limit
     });
 
-    const { transactionHash } = await userOpResponse.waitForTxHash();
-    console.log('Transaction Hash', transactionHash);
+    console.log('Transaction Hash', tx.hash);
 
-    const userOpReceipt = await userOpResponse.wait();
+    // Wait for transaction to be mined
+    const receipt = await tx.wait();
 
-    if (userOpReceipt.success === 'true') {
-      console.log('UserOp receipt', userOpReceipt);
-      console.log('Transaction receipt', userOpReceipt.receipt);
+    if (receipt.status === 1) {
+      console.log('Transaction receipt', receipt);
+      
       // Submit referral to Divvi
       await submitReferral({
-        txHash: transactionHash as `0x${string}`,
+        txHash: tx.hash as `0x${string}`,
         chainId: lisk.id,
       });
 
       return {
         success: true,
-        hash: transactionHash,
-        receipt: userOpReceipt
+        hash: tx.hash,
+        receipt: receipt
       };
     } else {
       throw new Error('Transaction failed');
