@@ -4,30 +4,18 @@ import { FreeDataBundleABI } from '../lib/FreeDataBundleABI';
 import { ethers } from 'ethers';
 const FREE_DATA_BUNDLE_ADDRESS = "0xfddbdb5bf0a70cb072535efad09ce0b5113c54c7" //'0x94a5d82a2d3561e0df469a4fcf6538c462bc1243';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
+import {useSendTransaction} from '@privy-io/react-auth';
+import { sign } from 'crypto';
 
-// Setup RPC URL with fallbacks in case the primary URL fails
-// This avoids the "net::ERR_NAME_NOT_RESOLVED" error
+
+const {sendTransaction} = useSendTransaction();
+
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
 ];
 
 // Default to the first URL
 let RPC_URL = RPC_URLS[0];
-
-// Helper to get ethers signer from Privy wallet
-export const getSignerFromPrivyWallet = async (privyWallet: any) => {
-  if (!privyWallet) {
-    throw new Error("No Privy wallet provided");
-  }
-
-  try {
-    const provider = await privyWallet.getEthersProvider();
-    return provider.getSigner();
-  } catch (error) {
-    console.error("Failed to get signer from Privy wallet:", error);
-    throw error;
-  }
-};
 
 // Try to find a working RPC URL and update the default if needed
 export const findWorkingRpcUrl = async (): Promise<string> => {
@@ -42,7 +30,7 @@ export const findWorkingRpcUrl = async (): Promise<string> => {
           method: 'eth_blockNumber',
           params: []
         }),
-        signal: AbortSignal.timeout(3000) // 3 second timeout
+        signal: AbortSignal.timeout(3000) 
       });
 
       if (response.ok) {
@@ -61,7 +49,6 @@ export const findWorkingRpcUrl = async (): Promise<string> => {
 };
 
 export const getPublicClient = () => {
-  // Use the current best RPC_URL
   return createPublicClient({
     chain: lisk,
     transport: http(RPC_URL)
@@ -162,13 +149,14 @@ export const getUserStatus = async (userAddress: `0x${string}`) => {
   }
 };
 
-// Whitelist self using embedded wallet
-export const whitelistSelf = async (address: `0x${string}`, privyWallet: any) => {
+
+// Whitelist self using Privy's signTransaction hook
+export const whitelistSelf = async (address: `0x${string}`) => {
   try {
-    if (!privyWallet || !address) {
+    if ( !address) {
       return {
         success: false,
-        error: new Error("Privy wallet or address not provided")
+        error: new Error("signTransaction function or address not provided")
       };
     }
 
@@ -182,43 +170,42 @@ export const whitelistSelf = async (address: `0x${string}`, privyWallet: any) =>
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
 
-    // Get signer from Privy wallet
-    const signer = await getSignerFromPrivyWallet(privyWallet);
-
-    // Initialize an ethers contract instance with signer
-    const contract = new ethers.Contract(FREE_DATA_BUNDLE_ADDRESS, FreeDataBundleABI, signer);
-
-    // Get the function data for whitelistSelf directly using the interface
+    // Get the function data for whitelistSelf
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('whitelistSelf', []);
-
-    // Append referral tag to the contract call data
     const dataWithReferral = functionData + referralTag;
 
-    // Send transaction using embedded wallet
-    const tx = await signer.sendTransaction({
+    // Get current gas price and nonce
+    const publicClient = getPublicClient();
+    const gasPrice = await publicClient.getGasPrice();
+    const nonce = await publicClient.getTransactionCount({ address });
+
+    // Sign transaction using Privy's hook
+    const signedTx = await sendTransaction({
+      from: address,
       to: FREE_DATA_BUNDLE_ADDRESS,
       data: dataWithReferral,
-      gasLimit: ethers.utils.hexlify(500000), // Set appropriate gas limit
+      chainId: lisk.id,
     });
 
-    console.log('Transaction Hash', tx.hash);
+    // Broadcast the signed transaction
+    console.log('Transaction Hash', signedTx.hash);
 
     // Wait for transaction to be mined
-    const receipt = await tx.wait();
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: signedTx.hash as `0x${string}` });
 
-    if (receipt.status === 1) {
+    if (receipt.status === 'success') {
       console.log('Transaction receipt', receipt);
 
       // Submit referral to Divvi
       await submitReferral({
-        txHash: tx.hash as `0x${string}`,
+        txHash: signedTx.hash as `0x${string}`,
         chainId: lisk.id,
       });
 
       return {
         success: true,
-        hash: tx.hash,
+        hash: signedTx.hash,
         receipt: receipt
       };
     } else {
@@ -233,16 +220,10 @@ export const whitelistSelf = async (address: `0x${string}`, privyWallet: any) =>
   }
 };
 
-// Submit attestation using embedded wallet
-export const submitAttestation = async (attestationText: any, address: `0x${string}`, privyWallet: any) => {
+// Submit attestation using Privy's signTransaction hook
+export const submitAttestation = async (attestationText: any, address: `0x${string}`) => {
   try {
-    if (!privyWallet) {
-      return {
-        success: false,
-        error: new Error("Privy wallet not provided")
-      };
-    }
-
+  
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
     
@@ -253,37 +234,42 @@ export const submitAttestation = async (attestationText: any, address: `0x${stri
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
 
-    // Get signer from Privy wallet
-    const signer = await getSignerFromPrivyWallet(privyWallet);
-
-    // Get the function data for attest directly using the interface
+    // Get the function data for attest
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('attest', [attestationText]);
+    const dataWithReferral = functionData + referralTag;
 
-    // Send transaction using embedded wallet
-    const tx = await signer.sendTransaction({
+    // Get current gas price and nonce
+    const publicClient = getPublicClient();
+    const gasPrice = await publicClient.getGasPrice();
+    const nonce = await publicClient.getTransactionCount({ address });
+
+    // Sign transaction using Privy's hook
+    const signedTx = await sendTransaction({
+      from: address,
       to: FREE_DATA_BUNDLE_ADDRESS,
-      data: functionData + referralTag, // Append referral tag to the data
-      gasLimit: ethers.utils.hexlify(500000), // Set appropriate gas limit
+      data: dataWithReferral,
+      chainId: lisk.id,
     });
 
-    console.log('Transaction Hash', tx.hash);
+    // Broadcast the signed transaction
+    console.log('Transaction Hash', signedTx.hash);
 
     // Wait for transaction to be mined
-    const receipt = await tx.wait();
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: signedTx.hash as `0x${string}` });
 
-    if (receipt.status === 1) {
+    if (receipt.status === 'success') {
       console.log('Transaction receipt', receipt);
       
       // Submit referral to Divvi
       await submitReferral({
-        txHash: tx.hash as `0x${string}`,
+        txHash: signedTx.hash as `0x${string}`,
         chainId: lisk.id,
       });
 
       return {
         success: true,
-        hash: tx.hash,
+        hash: signedTx.hash,
         receipt: receipt
       };
     } else {
@@ -298,15 +284,9 @@ export const submitAttestation = async (attestationText: any, address: `0x${stri
   }
 };
 
-// Claim bundle using embedded wallet
-export const claimBundle = async (address: `0x${string}`, privyWallet: any) => {
+// Claim bundle using Privy's signTransaction hook
+export const claimBundle = async (address: `0x${string}`) => {
   try {
-    if (!privyWallet) {
-      return {
-        success: false,
-        error: new Error("Privy wallet not provided")
-      };
-    }
 
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
@@ -318,37 +298,42 @@ export const claimBundle = async (address: `0x${string}`, privyWallet: any) => {
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
 
-    // Get signer from Privy wallet
-    const signer = await getSignerFromPrivyWallet(privyWallet);
-
-    // Get the function data for claim directly using the interface
+    // Get the function data for claim
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('claim', []);
+    const dataWithReferral = functionData + referralTag;
 
-    // Send transaction using embedded wallet
-    const tx = await signer.sendTransaction({
+    // Get current gas price and nonce
+    const publicClient = getPublicClient();
+    const gasPrice = await publicClient.getGasPrice();
+    const nonce = await publicClient.getTransactionCount({ address });
+
+    // Sign transaction using Privy's hook
+    const signedTx = await sendTransaction({
+      from: address,
       to: FREE_DATA_BUNDLE_ADDRESS,
-      data: functionData + referralTag, // Append referral tag to the data
-      gasLimit: ethers.utils.hexlify(500000), // Set appropriate gas limit
+      data: dataWithReferral,
+      chainId: lisk.id,
     });
 
-    console.log('Transaction Hash', tx.hash);
+    // Broadcast the signed transaction
+    console.log('Transaction Hash', signedTx.hash);
 
     // Wait for transaction to be mined
-    const receipt = await tx.wait();
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: signedTx.hash as `0x${string}` });
 
-    if (receipt.status === 1) {
+    if (receipt.status === 'success') {
       console.log('Transaction receipt', receipt);
       
       // Submit referral to Divvi
       await submitReferral({
-        txHash: tx.hash as `0x${string}`,
+        txHash: signedTx.hash as `0x${string}`,
         chainId: lisk.id,
       });
 
       return {
         success: true,
-        hash: tx.hash,
+        hash: signedTx.hash,
         receipt: receipt
       };
     } else {
