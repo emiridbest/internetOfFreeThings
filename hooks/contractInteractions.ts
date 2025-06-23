@@ -260,7 +260,7 @@ export function useContractInteractions() {
         error
       };
     }
-  }, [sendTransaction, prepareReferralTag, processTransaction]);
+  }, [sendTransaction]);
 
   // Claim bundle function
   const claimBundle = useCallback(async (address: `0x${string}`) => {
@@ -289,8 +289,6 @@ export function useContractInteractions() {
         chainId: lisk.id,
       });
 
-      // Process the transaction
-      return await processTransaction(signedTx.hash);
       
     } catch (error) {
       console.error("Error claiming bundle:", error);
@@ -299,7 +297,7 @@ export function useContractInteractions() {
         error
       };
     }
-  }, [sendTransaction, prepareReferralTag, processTransaction]);
+  }, [sendTransaction]);
 
   // Return all the contract interaction functions
   return {
