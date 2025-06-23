@@ -113,7 +113,38 @@ export default function Navbar({ items, accountId, appName }: NavbarProps) {
                     />
                   </button>
                   <p className="text-white">{appName}</p>
+<span>
+                          {({ active }) => {
+                            const copyWalletAddress = () => {
+                              if (userAddres) {
+                                navigator.clipboard.writeText(userAddres);
+                                toast.success("Wallet address copied to clipboard");
+                              }
+                            };
 
+                            return (
+                              <a
+                                href="#"
+                                className={classNames(
+                                  active ? "bg-gray-100" : "",
+                                  "block px-4 py-2 text-sm text-gray-700"
+                                )}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  copyWalletAddress();
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <WalletIcon className="h-5 w-5 mr-2" />
+                                    <span>Wallets {userAddres ? `(${userAddres.slice(-4)})` : ''}</span>
+                                  </div>
+                                  <ClipboardDocumentIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" aria-hidden="true" />
+                                </div>
+                              </a>
+                            );
+                          }}
+                        </span>
                   {/* Profile dropdown */}
                   <Menu as="div" className="relative ml-3">
                     <div className="flex bg-gray-800 rounded-full items-center hover:ring-white hover:ring-2 hover:ring-offset-2 hover:ring-offset-gray-800 hover:outline-none hover:cursor-pointer">
