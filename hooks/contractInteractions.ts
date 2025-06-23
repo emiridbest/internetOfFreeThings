@@ -19,7 +19,7 @@ export const getSignerFromPrivyWallet = async (privyWallet: any) => {
   if (!privyWallet) {
     throw new Error("No Privy wallet provided");
   }
-  
+
   try {
     const provider = await privyWallet.getEthersProvider();
     return provider.getSigner();
@@ -46,7 +46,7 @@ export const findWorkingRpcUrl = async (): Promise<string> => {
         }),
         signal: AbortSignal.timeout(3000) // 3 second timeout
       });
-      
+
       if (response.ok) {
         console.log(`Using RPC URL: ${url}`);
         RPC_URL = url; // Update the global RPC_URL
@@ -57,7 +57,7 @@ export const findWorkingRpcUrl = async (): Promise<string> => {
       // Continue to next URL
     }
   }
-  
+
   console.warn("All RPC URLs failed, using default");
   return RPC_URL; // Return current RPC_URL even if all failed
 };
@@ -174,25 +174,25 @@ export const whitelistSelf = async (address: `0x${string}`, smartAccount: any) =
         error: new Error("Smart account or address not initialized")
       };
     }
-    
+
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
-     // Generate referral tag
+    // Generate referral tag
     const referralTag = getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
-    }); 
-      // Initialize an ethers JsonRpcProvider for your network
+    });
+    // Initialize an ethers JsonRpcProvider for your network
     const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    
+
     // Initialize an ethers contract instance
     const contract = new ethers.Contract(FREE_DATA_BUNDLE_ADDRESS, FreeDataBundleABI, provider);
-    
+
     // Get the function data for whitelistSelf directly using the interface
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('whitelistSelf', []);
-    
+
     // Append referral tag to the contract call data
     const dataWithReferral = functionData + referralTag;
 
@@ -211,17 +211,17 @@ export const whitelistSelf = async (address: `0x${string}`, smartAccount: any) =
     console.log('Transaction Hash', transactionHash);
 
     const userOpReceipt = await userOpResponse.wait();
-    
+
     if (userOpReceipt.success === 'true') {
       console.log('UserOp receipt', userOpReceipt);
       console.log('Transaction receipt', userOpReceipt.receipt);
-      
+
       // Submit referral to Divvi
       await submitReferral({
         txHash: transactionHash as `0x${string}`,
         chainId: lisk.id,
       });
-      
+
       return {
         success: true,
         hash: transactionHash,
@@ -241,7 +241,7 @@ export const whitelistSelf = async (address: `0x${string}`, smartAccount: any) =
 
 // FIXED: Modified to accept wallet parameter
 // Submit attestation using Biconomy gasless transaction
-export const submitAttestation = async ( attestationText:any, smartAccount: any) => {
+export const submitAttestation = async (attestationText: any, smartAccount: any) => {
   try {
     if (!smartAccount) {
       return {
@@ -249,11 +249,15 @@ export const submitAttestation = async ( attestationText:any, smartAccount: any)
         error: new Error("Smart account not initialized")
       };
     }
-    
+
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();    // Initialize an ethers JsonRpcProvider for your network
     const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    
+    const referralTag = getReferralTag({
+      user: smartAccount.sender,
+      consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
+      providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
+    });
     // Get the function data for attest directly using the interface
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('attest', [attestationText]);
@@ -261,7 +265,7 @@ export const submitAttestation = async ( attestationText:any, smartAccount: any)
     // Construct transaction for smart account
     const attestTx = {
       to: FREE_DATA_BUNDLE_ADDRESS,
-      data: functionData
+      data: functionData + referralTag // Append referral tag to the data
     };
 
     // Send transaction to mempool gaslessly
@@ -273,11 +277,16 @@ export const submitAttestation = async ( attestationText:any, smartAccount: any)
     console.log('Transaction Hash', transactionHash);
 
     const userOpReceipt = await userOpResponse.wait();
-    
+
     if (userOpReceipt.success === 'true') {
       console.log('UserOp receipt', userOpReceipt);
       console.log('Transaction receipt', userOpReceipt.receipt);
-      
+      // Submit referral to Divvi
+      await submitReferral({
+        txHash: transactionHash as `0x${string}`,
+        chainId: lisk.id,
+      });
+
       return {
         success: true,
         hash: transactionHash,
@@ -297,20 +306,24 @@ export const submitAttestation = async ( attestationText:any, smartAccount: any)
 
 // FIXED: Modified to accept wallet parameter and smart account
 // Claim bundle using Biconomy gasless transaction
-export const claimBundle = async ( smartAccount: any) => {
+export const claimBundle = async (smartAccount: any) => {
   try {
-    if(!smartAccount) {
+    if (!smartAccount) {
       return {
         success: false,
         error: new Error("Smart account not initialized")
       };
     }
-    
+
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
-      // Initialize an ethers JsonRpcProvider for your network
+    // Initialize an ethers JsonRpcProvider for your network
     const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    
+    const referralTag = getReferralTag({
+      user: smartAccount.sender,
+      consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
+      providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
+    });
     // Get the function data for claim directly using the interface
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('claim', []);
@@ -318,7 +331,7 @@ export const claimBundle = async ( smartAccount: any) => {
     // Construct transaction for smart account
     const claimTx = {
       to: FREE_DATA_BUNDLE_ADDRESS,
-      data: functionData
+      data: functionData + referralTag // Append referral tag to the data
     };
 
     // Send transaction to mempool gaslessly
@@ -330,11 +343,16 @@ export const claimBundle = async ( smartAccount: any) => {
     console.log('Transaction Hash', transactionHash);
 
     const userOpReceipt = await userOpResponse.wait();
-    
+
     if (userOpReceipt.success === 'true') {
       console.log('UserOp receipt', userOpReceipt);
       console.log('Transaction receipt', userOpReceipt.receipt);
-      
+      // Submit referral to Divvi
+      await submitReferral({
+        txHash: transactionHash as `0x${string}`,
+        chainId: lisk.id,
+      });
+
       return {
         success: true,
         hash: transactionHash,
