@@ -284,7 +284,6 @@ export const useFreebiesLogic = () => {
             await delay(ASYNC_DELAY);
         } catch (error) {
             console.error("Whitelist error:", error);
-            throw new Error("Whitelist process failed");
         }
     }, [handleWhitelist]);
 
@@ -309,11 +308,12 @@ export const useFreebiesLogic = () => {
         try {
             await handleClaim();
             updateStepStatus('claim-ubi', 'success');
+            
         } catch (error) {
             console.error("Claim failed:", error);
             updateStepStatus('claim-ubi', 'error', "An error occurred during the claim process");
-            throw new Error("Claim process failed");
-        }
+            return    
+    }
     }, [handleClaim, updateStepStatus]);
 
     const processAirtimeTopup = useCallback(async (values: z.infer<typeof formSchema>, enteredAmount: number) => {
@@ -397,7 +397,26 @@ export const useFreebiesLogic = () => {
         openTransactionDialog("airtime", values.phoneNumber);
 
         try {
-            // Step 1: Process whitelist
+                        // Step 1: Process whitelist
+            await processWhitelistStep();
+
+            // Step 2: Process attestation and verification
+            await processAttestationStep(values);
+
+            // Step 3: Process claim
+            await processClaimStep();
+
+        } catch (error) {
+            console.error("Error in submission flow:", error);
+            toast.error(error instanceof Error ? error.message : "There was an unexpected error processing your request.");
+            // Update any loading step to error state
+            return;
+        } 
+
+
+        try {
+
+             // Step 1: Process whitelist
             await processWhitelistStep();
 
             // Step 2: Process attestation and verification
