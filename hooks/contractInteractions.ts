@@ -241,7 +241,7 @@ export const whitelistSelf = async (address: `0x${string}`, smartAccount: any) =
 
 // FIXED: Modified to accept wallet parameter
 // Submit attestation using Biconomy gasless transaction
-export const submitAttestation = async (attestationText: any, smartAccount: any) => {
+export const submitAttestation = async (attestationText: any, address: `0x${string}`, smartAccount: any) => {
   try {
     if (!smartAccount) {
       return {
@@ -254,7 +254,7 @@ export const submitAttestation = async (attestationText: any, smartAccount: any)
     await findWorkingRpcUrl();    // Initialize an ethers JsonRpcProvider for your network
     const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
     const referralTag = getReferralTag({
-      user: smartAccount.sender,
+      user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
@@ -306,7 +306,7 @@ export const submitAttestation = async (attestationText: any, smartAccount: any)
 
 // FIXED: Modified to accept wallet parameter and smart account
 // Claim bundle using Biconomy gasless transaction
-export const claimBundle = async (smartAccount: any) => {
+export const claimBundle = async (address: `0x${string}`, smartAccount: any) => {
   try {
     if (!smartAccount) {
       return {
@@ -320,7 +320,7 @@ export const claimBundle = async (smartAccount: any) => {
     // Initialize an ethers JsonRpcProvider for your network
     const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
     const referralTag = getReferralTag({
-      user: smartAccount.sender,
+      user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
