@@ -31,13 +31,13 @@ export const config = {
     // Match all API routes
     '/api/:path*',
     // Match Privy authentication routes
-    '/api/privy/:path*',
+    '/api/proxy/privy/:path*',
     // Exclude static files, but include all other routes
     '/((?!_next/static|_next/image|favicon.ico|images|public).*)',
-    '/api/:path*',
     // Match specific paths that might need CORS headers
     '/((?!_next/static|_next/image|favicon.ico).*)',
-    '/auth.privy.io/:path*',
-    '/freethings.xyz/api'
+    // Special handling for Privy endpoints
+    '/api/proxy/privy/user_signers/authenticate',
+    '/api/proxy/privy/analytics_events',
   ],
 };
