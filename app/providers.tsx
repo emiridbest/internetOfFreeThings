@@ -2,8 +2,7 @@
 import { http } from "viem";
 import { lisk } from "viem/chains";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { createMeeClient, toMultichainNexusAccount } from "@biconomy/abstractjs";
-import { useState, createContext, useContext, ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 
 
 
@@ -12,7 +11,6 @@ export default function AppProvider({ children }: { children: ReactNode }) {
   return (
       <PrivyProvider
         appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}    
-        
         config={{
           loginMethods: ['email', 'wallet'],
           appearance: {
@@ -25,6 +23,7 @@ export default function AppProvider({ children }: { children: ReactNode }) {
           },
           defaultChain: lisk,
           supportedChains: [lisk],
+
         }}
       >
             {children}
