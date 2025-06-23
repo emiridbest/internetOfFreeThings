@@ -21,9 +21,9 @@ import { ethers } from 'ethers';
 
 type FreeClaimContextType = {
   isProcessing: boolean;
-  handleWhitelist: () => Promise<void>;
-  handleAttest: () => Promise<void>;
-  handleClaim: () => Promise<void>;
+  handleWhitelist: () => Promise<boolean>;
+  handleAttest: () => Promise<boolean>;
+  handleClaim: () => Promise<boolean>;
   // Transaction dialog
   isTransactionDialogOpen: boolean;
   setIsTransactionDialogOpen: (open: boolean) => void;
@@ -48,7 +48,8 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
-  const { whitelistSelf, submitAttestation, claimBundle,  } = useContractInteractions()
+  const { whitelistSelf, submitAttestation, claimBundle } = useContractInteractions()
+  
   // RPC URLs with fallbacks
   const RPC_URLS = [
     process.env.NEXT_PUBLIC_RPC_URL!
@@ -122,16 +123,18 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   };
 
   // Initialize smart account client with proper error handling
-  const initializeSmartAccount = async () => {
+  const initializeSmartAccount = async (): Promise<boolean> => {
     if (!embeddedWallet) {
-      throw new Error("No wallet provided");
+      console.error("No wallet provided");
+      return false;
     }
 
     try {
       // First connect the wallet
       const connected = await connectWallet(embeddedWallet);
       if (!connected) {
-        throw new Error("Failed to connect wallet");
+        console.error("Failed to connect wallet");
+        return false;
       }
       
       // Get a working RPC URL
@@ -155,11 +158,12 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
         ethersProvider = new ethers.providers.Web3Provider(provider);
       } catch (providerError) {
         console.error("Failed to create Web3Provider:", providerError);
-        throw new Error("Could not initialize wallet provider");
+        return false;
       }
       
       if (!ethersProvider) {
-        throw new Error("Could not initialize ethers provider");
+        console.error("Could not initialize ethers provider");
+        return false;
       }
       
       // Get signer
@@ -167,7 +171,6 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       
       // Set proper defaults for Smart Account creation
       const biconomyBundlerUrl = process.env.NEXT_PUBLIC_BICONOMY_BUNDLER_URL!;
-      
       const biconomyPaymasterUrl = process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_KEY!; 
 
       console.log("Creating smart account with:", {
@@ -184,20 +187,20 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
         });
 
         if (!smartAccountClient) {
-          throw new Error("Smart account client returned null");
+          console.error("Smart account client returned null");
+          return false;
         }
 
         setSmartAccount(smartAccountClient);
         console.log("Smart account initialized successfully");
-        return smartAccountClient;
+        return true;
       } catch (smartAccountError) {
         console.error("Error creating smart account client:", smartAccountError);
-        throw new Error("Failed to initialize smart account: " + 
-                      (smartAccountError instanceof Error ? smartAccountError.message : "Unknown error"));
+        return false;
       }
     } catch (error) {
       console.error("Failed to initialize smart account:", error);
-      throw error;
+      return false;
     }
   };
 
@@ -308,107 +311,87 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Handle whitelist function - First step
-  const handleWhitelist = async () => {
+  // MODIFIED: Handle whitelist function - Returns boolean, halts on failure
+  const handleWhitelist = async (): Promise<boolean> => {
     if (!isConnected || !address) {
-      toast.error("Please connect your wallet");
-      return;
+      const errorMsg = "Please connect your wallet";
+      toast.error(errorMsg);
+      updateStepStatus('whitelist', 'error', errorMsg);
+      return false;
     }
-
-    // Initialize smart account if not already initialized
-    if (!smartAccount) {
-      try {
-        await initializeSmartAccount();
-      } catch (error) {
-        console.error("Could not initialize smart account for whitelist:", error);
-        toast.error("Could not initialize your wallet. Please try again.");
-        updateStepStatus('whitelist', 'error', "Failed to initialize wallet");
-        return;
-      }
-    }
-
     try {
       updateStepStatus('whitelist', 'loading');
       setIsProcessing(true);
 
       const result = await whitelistSelf(user?.wallet?.address as `0x${string}`);
-      if (result.success) {
+      
+      if (result?.success) {
         toast.success("Successfully added to whitelist!");
         updateStepStatus('whitelist', 'success');
+        return true;
       } else {
+        const errorMsg = "Failed to add to whitelist";
         toast.error("Failed to whitelist. Please try again.");
-        updateStepStatus('whitelist', 'error', "Failed to add to whitelist");
+        updateStepStatus('whitelist', 'error', errorMsg);
+        return false;
       }
     } catch (error) {
       console.error("Error whitelisting:", error);
+      const errorMsg = "Error during whitelisting";
       toast.error("Error during whitelisting. Please try again.");
-      updateStepStatus('whitelist', 'error', "Error during whitelisting");
-      throw error;
+      updateStepStatus('whitelist', 'error', errorMsg);
+      return false;
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle attestation function - Second step
-  const handleAttest = async () => {
+  // MODIFIED: Handle attestation function - Returns boolean, halts on failure
+  const handleAttest = async (): Promise<boolean> => {
     if (!isConnected || !address) {
-      toast.error("Please connect your wallet");
-      return;
+      const errorMsg = "Please connect your wallet";
+      toast.error(errorMsg);
+      updateStepStatus('attestation', 'error', errorMsg);
+      return false;
     }
     
-    // Initialize smart account if not already initialized
-    if (!smartAccount) {
-      try {
-        await initializeSmartAccount();
-      } catch (error) {
-        console.error("Could not initialize smart account for attestation:", error);
-        toast.error("Could not initialize your wallet. Please try again.");
-        updateStepStatus('attestation', 'error', "Failed to initialize wallet");
-        throw error;
-      }
-    }
 
     try {
       updateStepStatus('attestation', 'loading');
       setIsProcessing(true);
       const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free airtime bundle.`;
-      const result = await submitAttestation( attestationText, user?.wallet?.address as `0x${string}`);
+      const result = await submitAttestation(attestationText, user?.wallet?.address as `0x${string}`);
 
-      if (result.success) {
+      if (result?.success) {
         toast.success("Successfully completed attestation!");
         updateStepStatus('attestation', 'success');
+        return true;
       } else {
+        const errorMsg = "Failed to complete attestation";
         toast.error("Failed to attest. Please try again.");
-        updateStepStatus('attestation', 'error', "Failed to complete attestation");
+        updateStepStatus('attestation', 'error', errorMsg);
+        return false;
       }
     } catch (error) {
       console.error("Error attesting:", error);
+      const errorMsg = "Error during attestation";
       toast.error("Error during attestation. Please try again.");
-      updateStepStatus('attestation', 'error', "Error during attestation");
-      throw error;
+      updateStepStatus('attestation', 'error', errorMsg);
+      return false;
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle claim bundle logic - Final step
-  const handleClaim = async () => {
+  // MODIFIED: Handle claim bundle logic - Returns boolean, halts on failure
+  const handleClaim = async (): Promise<boolean> => {
     if (!isConnected || !address) {
-      toast.error("Please connect your wallet");
-      return;
+      const errorMsg = "Please connect your wallet";
+      toast.error(errorMsg);
+      updateStepStatus('claim-ubi', 'error', errorMsg);
+      return false;
     }
 
-    // Initialize smart account if not already initialized
-    if (!smartAccount) {
-      try {
-        await initializeSmartAccount();
-      } catch (error) {
-        console.error("Could not initialize smart account for claim:", error);
-        toast.error("Could not initialize your wallet. Please try again.");
-        updateStepStatus('claim-ubi', 'error', "Failed to initialize wallet");
-        return;
-      }
-    }
 
     try {
       updateStepStatus('claim-ubi', 'loading');
@@ -418,20 +401,28 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
 
       if (result?.success) {
         updateStepStatus('claim-ubi', 'success');
-      } else if (result) {
-        toast.error("You must wait before claiming again");
-        updateStepStatus('claim-ubi', 'error', "You must wait before claiming again");
-        
+        return true;
       } else {
-        toast.error("Failed to claim airtime bundle");
-        updateStepStatus('claim-ubi', 'error', "Failed to claim airtime bundle");
-
+        let errorMsg = "Failed to claim airtime bundle";
+        
+        // Check if it's a specific error about waiting
+        if (!result || (result && !result.success)) {
+          // You can customize this based on your contract's error responses
+          const waitingError = "You must wait before claiming again";
+          toast.error(waitingError);
+          updateStepStatus('claim-ubi', 'error', waitingError);
+        } else {
+          toast.error(errorMsg);
+          updateStepStatus('claim-ubi', 'error', errorMsg);
+        }
+        return false;
       }
     } catch (error) {
       console.error("Error claiming bundle:", error);
+      const errorMsg = "Error during claim process";
       toast.error("Error during claim. Please try again.");
-      updateStepStatus('claim-ubi', 'error', "Error during claim process");
-      throw error;
+      updateStepStatus('claim-ubi', 'error', errorMsg);
+      return false;
     } finally {
       setIsProcessing(false);
     }
