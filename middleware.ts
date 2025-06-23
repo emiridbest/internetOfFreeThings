@@ -1,28 +1,36 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
-  // Handle OPTIONS requests specifically for CORS preflight
-  if (request.method === 'OPTIONS') {
-    const response = new NextResponse(null, { status: 204 });
-    
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    response.headers.set('Access-Control-Max-Age', '86400');
-    
-    return response;
+// Replace this array with an array of paths for pages in your app that do not require the
+// user to be authenticated, e.g. a login page
+const UNAUTHENTICATED_PAGES = [];
+
+
+export async function middleware(req: NextRequest) {
+  const cookieAuthToken = req.cookies.get('privy-token');
+  const cookieSession = req.cookies.get('privy-session');
+
+  // Bypass middleware when `privy_oauth_code` is a query parameter, as
+  // we are in the middle of an authentication flow
+  if (req.nextUrl.searchParams.get('privy_oauth_code')) return NextResponse.next();
+
+  // Bypass middleware when the /refresh page is fetched, otherwise
+  // we will enter an infinite loop
+  if (req.url.includes('/refresh')) return NextResponse.next();
+
+  // If the user has `privy-token`, they are definitely authenticated
+  const definitelyAuthenticated = Boolean(cookieAuthToken);
+  // If user has `privy-session`, they also have `privy-refresh-token` and
+  // may be authenticated once their session is refreshed in the client
+  const maybeAuthenticated = Boolean(cookieSession);
+
+  if (!definitelyAuthenticated && maybeAuthenticated) {
+    // If user is not authenticated, but is maybe authenticated
+    // redirect them to the `/refresh` page to trigger client-side refresh flow
+    return NextResponse.redirect(new URL('/refresh', req.url));
   }
-    // For all other requests
-  const response = NextResponse.next();
-  
-  // Add CORS headers
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
-  response.headers.set('Access-Control-Allow-Credentials', 'true');
-  
-  return response;
+
+  return NextResponse.next();
 }
 
 // Configure the middleware to run on specific paths
