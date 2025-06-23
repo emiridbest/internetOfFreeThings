@@ -5,13 +5,7 @@ import { toast } from 'sonner';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { createSmartAccountClient, PaymasterMode } from "@biconomy/account";
 
-import {
-  getUserStatus,
-  whitelistSelf,
-  submitAttestation,
-  claimBundle,
-  findWorkingRpcUrl
-} from '@/hooks/contractInteractions';
+import useContractInteractions from '@/hooks/contractInteractions';
 import {
   Dialog,
   DialogContent,
@@ -54,7 +48,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
-  
+  const { whitelistSelf, submitAttestation, claimBundle,  } = useContractInteractions()
   // RPC URLs with fallbacks
   const RPC_URLS = [
     process.env.NEXT_PUBLIC_RPC_URL!
@@ -142,7 +136,6 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       
       // Get a working RPC URL
       await getWorkingRpcUrl();
-      await findWorkingRpcUrl(); // Also update the RPC URL in contractInteractions.ts
       
       let ethersProvider;
       try {
@@ -424,7 +417,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       if (result?.success) {
         toast.success("Successfully claimed your free airtime bundle!");
         updateStepStatus('claim-ubi', 'success');
-      } else if (result?.isClaimTooSoonError) {
+      } else if (result) {
         toast.error("You must wait before claiming again");
         updateStepStatus('claim-ubi', 'error', "You must wait before claiming again");
       } else {
@@ -435,6 +428,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       console.error("Error claiming bundle:", error);
       toast.error("Error during claim. Please try again.");
       updateStepStatus('claim-ubi', 'error', "Error during claim process");
+      return;
     } finally {
       setIsProcessing(false);
     }
