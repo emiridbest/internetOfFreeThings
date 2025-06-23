@@ -60,6 +60,14 @@ export default function Navbar({ items, accountId, appName }: NavbarProps) {
     router.push(`/${item.resource}/${resourceId}/${item.id}`);
   };
 
+  // Copy wallet address function
+  const copyWalletAddress = () => {
+    if (userAddres) {
+      navigator.clipboard.writeText(userAddres);
+      toast.success("Wallet address copied to clipboard");
+    }
+  };
+
   return (
     <Disclosure as="nav" className="bg-gray-800">
       {({ open }) => (
@@ -113,38 +121,17 @@ export default function Navbar({ items, accountId, appName }: NavbarProps) {
                     />
                   </button>
                   <p className="text-white">{appName}</p>
-<span>
-                          {({ active }) => {
-                            const copyWalletAddress = () => {
-                              if (userAddres) {
-                                navigator.clipboard.writeText(userAddres);
-                                toast.success("Wallet address copied to clipboard");
-                              }
-                            };
+                  
+                  {/* Wallet display in header */}
+                  <button
+                    onClick={copyWalletAddress}
+                    className="ml-3 flex items-center text-gray-300 hover:text-white"
+                  >
+                    <WalletIcon className="h-5 w-5 mr-2" />
+                    <span>{userAddres ? `${userAddres.slice(-4)}` : ''}</span>
+                    <ClipboardDocumentIcon className="ml-1 h-4 w-4" aria-hidden="true" />
+                  </button>
 
-                            return (
-                              <a
-                                href="#"
-                                className={classNames(
-                                  active ? "bg-gray-100" : "",
-                                  "block px-4 py-2 text-sm text-gray-700"
-                                )}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  copyWalletAddress();
-                                }}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center">
-                                    <WalletIcon className="h-5 w-5 mr-2" />
-                                    <span>Wallets {userAddres ? `(${userAddres.slice(-4)})` : ''}</span>
-                                  </div>
-                                  <ClipboardDocumentIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" aria-hidden="true" />
-                                </div>
-                              </a>
-                            );
-                          }}
-                        </span>
                   {/* Profile dropdown */}
                   <Menu as="div" className="relative ml-3">
                     <div className="flex bg-gray-800 rounded-full items-center hover:ring-white hover:ring-2 hover:ring-offset-2 hover:ring-offset-gray-800 hover:outline-none hover:cursor-pointer">
@@ -176,36 +163,27 @@ export default function Navbar({ items, accountId, appName }: NavbarProps) {
                     >
                       <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                         <Menu.Item>
-                          {({ active }) => {
-                            const copyWalletAddress = () => {
-                              if (userAddres) {
-                                navigator.clipboard.writeText(userAddres);
-                                toast.success("Wallet address copied to clipboard");
-                              }
-                            };
-
-                            return (
-                              <a
-                                href="#"
-                                className={classNames(
-                                  active ? "bg-gray-100" : "",
-                                  "block px-4 py-2 text-sm text-gray-700"
-                                )}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  copyWalletAddress();
-                                }}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center">
-                                    <WalletIcon className="h-5 w-5 mr-2" />
-                                    <span>Wallets {userAddres ? `(${userAddres.slice(-4)})` : ''}</span>
-                                  </div>
-                                  <ClipboardDocumentIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" aria-hidden="true" />
+                          {({ active }) => (
+                            <a
+                              href="#"
+                              className={classNames(
+                                active ? "bg-gray-100" : "",
+                                "block px-4 py-2 text-sm text-gray-700"
+                              )}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                copyWalletAddress();
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <WalletIcon className="h-5 w-5 mr-2" />
+                                  <span>Wallets {userAddres ? `(${userAddres.slice(-4)})` : ''}</span>
                                 </div>
-                              </a>
-                            );
-                          }}
+                                <ClipboardDocumentIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" aria-hidden="true" />
+                              </div>
+                            </a>
+                          )}
                         </Menu.Item>
                         <Menu.Item>
                           {({ active }) => (
@@ -264,9 +242,52 @@ export default function Navbar({ items, accountId, appName }: NavbarProps) {
               </div>
             </div>
           </div>
+          
+          {/* Mobile menu panel */}
+          <Disclosure.Panel className="sm:hidden">
+            <div className="space-y-1 px-2 pb-3 pt-2">
+              {items?.map((item) => (
+                <Disclosure.Button
+                  key={item.id}
+                  onClick={() => navigateTo(item)}
+                  className={classNames(
+                    selected === item.id
+                      ? "bg-gray-900 text-white"
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                    "block rounded-md px-3 py-2 text-base font-medium"
+                  )}
+                >
+                  {item.name}
+                </Disclosure.Button>
+              ))}
+            </div>
+            {/* Mobile wallet display */}
+            <div className="border-t border-gray-700 pb-3 pt-4">
+              <div className="flex items-center px-5">
+                <div className="flex-shrink-0">
+                  <Image
+                    className="h-8 w-8 rounded-full"
+                    src="/images/avatar.png"
+                    alt="avatar placeholder"
+                    height={32}
+                    width={32}
+                  />
+                </div>
+                <div className="ml-3">
+                  <div className="text-base font-medium text-white">Account</div>
+                  <button 
+                    onClick={copyWalletAddress}
+                    className="flex items-center text-sm font-medium text-gray-400 hover:text-white"
+                  >
+                    <span>{userAddres ? userAddres.slice(-4) : ''}</span>
+                    <ClipboardDocumentIcon className="ml-1 h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Disclosure.Panel>
         </>
       )}
     </Disclosure>
   );
 }
-
