@@ -16,7 +16,7 @@ export async function middleware(req: NextRequest) {
 
   // Bypass middleware when the /refresh page is fetched, otherwise
   // we will enter an infinite loop
-  if (req.url.includes('/refresh')) return NextResponse.next();
+  if (req.url.includes('/')) return NextResponse.next();
 
   // If the user has `privy-token`, they are definitely authenticated
   const definitelyAuthenticated = Boolean(cookieAuthToken);
@@ -27,7 +27,7 @@ export async function middleware(req: NextRequest) {
   if (!definitelyAuthenticated && maybeAuthenticated) {
     // If user is not authenticated, but is maybe authenticated
     // redirect them to the `/refresh` page to trigger client-side refresh flow
-    return NextResponse.redirect(new URL('/refresh', req.url));
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
   return NextResponse.next();
