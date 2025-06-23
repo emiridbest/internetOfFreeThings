@@ -3,7 +3,7 @@ import { lisk } from 'viem/chains';
 import { FreeDataBundleABI } from '../lib/FreeDataBundleABI';
 import { ethers } from 'ethers';
 import { createSmartAccountClient, PaymasterMode } from "@biconomy/account";
-const FREE_DATA_BUNDLE_ADDRESS = "0x1587cfa45ccc6b9de5373cd475d088d02a9158da" //'0x94a5d82a2d3561e0df469a4fcf6538c462bc1243';
+const FREE_DATA_BUNDLE_ADDRESS = "0xfddbdb5bf0a70cb072535efad09ce0b5113c54c7" //'0x94a5d82a2d3561e0df469a4fcf6538c462bc1243';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 // Setup RPC URL with fallbacks in case the primary URL fails
 // This avoids the "net::ERR_NAME_NOT_RESOLVED" error
