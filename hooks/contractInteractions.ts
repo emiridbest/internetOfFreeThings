@@ -250,8 +250,7 @@ export function useContractInteractions() {
         chainId: lisk.id,
       });
 
-      // Process the transaction
-      return await processTransaction(signedTx.hash);
+
       
     } catch (error) {
       console.error("Error submitting attestation:", error);
