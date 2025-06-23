@@ -237,18 +237,16 @@ export function useContractInteractions() {
       await findWorkingRpcUrl();
 
       // Generate referral tag
-      const referralTag = prepareReferralTag(address);
 
       // Get the function data for attest
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
       const functionData = iface.encodeFunctionData('attest', [attestationText]);
-      const dataWithReferral = functionData + referralTag;
 
       // Sign transaction using Privy's hook
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
-        data: dataWithReferral,
+        data: functionData,
         chainId: lisk.id,
       });
 
@@ -278,18 +276,16 @@ export function useContractInteractions() {
       await findWorkingRpcUrl();
 
       // Generate referral tag
-      const referralTag = prepareReferralTag(address);
 
       // Get the function data for claim
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
       const functionData = iface.encodeFunctionData('claim', []);
-      const dataWithReferral = functionData + referralTag;
 
       // Sign transaction using Privy's hook
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
-        data: dataWithReferral,
+        data: functionData,
         chainId: lisk.id,
       });
 

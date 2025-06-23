@@ -9,6 +9,9 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Logo } from "./logo";
+import { usePrivy } from '@privy-io/react-auth';
+import { ClipboardDocumentIcon, WalletIcon } from "@heroicons/react/24/outline";
+import { toast } from "sonner"
 
 function classNames(...classes: Array<string | boolean>): string {
   return classes.filter(Boolean).join(" ");
@@ -38,7 +41,9 @@ type NavbarProps = {
 export default function Navbar({ items, accountId, appName }: NavbarProps) {
   const router = useRouter();
   const resourceId = accountId;
-  
+  const { user } = usePrivy();
+  const userAddres = user?.wallet?.address || '';
+
   // Use usePathname() hook from next/navigation instead of window.location
   const pathname = usePathname();
   const selected = pathname ? extractTabFromPath(pathname) : '';
@@ -139,6 +144,38 @@ export default function Navbar({ items, accountId, appName }: NavbarProps) {
                       leaveTo="transform opacity-0 scale-95"
                     >
                       <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                        <Menu.Item>
+                          {({ active }) => {
+                            const copyWalletAddress = () => {
+                              if (userAddres) {
+                                navigator.clipboard.writeText(userAddres);
+                                toast.success("Wallet address copied to clipboard");
+                              }
+                            };
+
+                            return (
+                              <a
+                                href="#"
+                                className={classNames(
+                                  active ? "bg-gray-100" : "",
+                                  "block px-4 py-2 text-sm text-gray-700"
+                                )}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  copyWalletAddress();
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <WalletIcon className="h-5 w-5 mr-2" />
+                                    <span>Wallets {userAddres ? `(${userAddres.slice(-4)})` : ''}</span>
+                                  </div>
+                                  <ClipboardDocumentIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" aria-hidden="true" />
+                                </div>
+                              </a>
+                            );
+                          }}
+                        </Menu.Item>
                         <Menu.Item>
                           {({ active }) => (
                             <a
