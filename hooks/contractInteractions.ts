@@ -4,11 +4,9 @@ import { FreeDataBundleABI } from '../lib/FreeDataBundleABI';
 import { ethers } from 'ethers';
 const FREE_DATA_BUNDLE_ADDRESS = "0xfddbdb5bf0a70cb072535efad09ce0b5113c54c7" //'0x94a5d82a2d3561e0df469a4fcf6538c462bc1243';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
-import {useSendTransaction} from '@privy-io/react-auth';
-import { sign } from 'crypto';
+import { useSendTransaction } from '@privy-io/react-auth';
 
 
-const {sendTransaction} = useSendTransaction();
 
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
@@ -30,7 +28,7 @@ export const findWorkingRpcUrl = async (): Promise<string> => {
           method: 'eth_blockNumber',
           params: []
         }),
-        signal: AbortSignal.timeout(3000) 
+        signal: AbortSignal.timeout(3000)
       });
 
       if (response.ok) {
@@ -153,16 +151,22 @@ export const getUserStatus = async (userAddress: `0x${string}`) => {
 // Whitelist self using Privy's signTransaction hook
 export const whitelistSelf = async (address: `0x${string}`) => {
   try {
-    if ( !address) {
+    if (!address) {
       return {
         success: false,
         error: new Error("signTransaction function or address not provided")
       };
     }
-
+    const { sendTransaction } = useSendTransaction();
+    if (!sendTransaction) {
+      return {
+        success: false,
+        error: new Error("sendTransaction hook not available")
+      };
+    }
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
-    
+
     // Generate referral tag
     const referralTag = getReferralTag({
       user: address,
@@ -223,17 +227,23 @@ export const whitelistSelf = async (address: `0x${string}`) => {
 // Submit attestation using Privy's signTransaction hook
 export const submitAttestation = async (attestationText: any, address: `0x${string}`) => {
   try {
-  
+
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
-    
+
     // Generate referral tag
     const referralTag = getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
-
+    const { sendTransaction } = useSendTransaction();
+    if (!sendTransaction) {
+      return {
+        success: false,
+        error: new Error("sendTransaction hook not available")
+      };
+    }
     // Get the function data for attest
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('attest', [attestationText]);
@@ -260,7 +270,7 @@ export const submitAttestation = async (attestationText: any, address: `0x${stri
 
     if (receipt.status === 'success') {
       console.log('Transaction receipt', receipt);
-      
+
       // Submit referral to Divvi
       await submitReferral({
         txHash: signedTx.hash as `0x${string}`,
@@ -290,14 +300,20 @@ export const claimBundle = async (address: `0x${string}`) => {
 
     // Try to find a working RPC URL first
     await findWorkingRpcUrl();
-    
+
     // Generate referral tag
     const referralTag = getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca', '0xc95876688026be9d6fa7a7c33328bd013effa2bb', '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
     });
-
+    const { sendTransaction } = useSendTransaction();
+    if (!sendTransaction) {
+      return {
+        success: false,
+        error: new Error("sendTransaction hook not available")
+      };
+    }
     // Get the function data for claim
     const iface = new ethers.utils.Interface(FreeDataBundleABI);
     const functionData = iface.encodeFunctionData('claim', []);
@@ -324,7 +340,7 @@ export const claimBundle = async (address: `0x${string}`) => {
 
     if (receipt.status === 'success') {
       console.log('Transaction receipt', receipt);
-      
+
       // Submit referral to Divvi
       await submitReferral({
         txHash: signedTx.hash as `0x${string}`,
