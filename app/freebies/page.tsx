@@ -40,6 +40,7 @@ function FreebiesFormContent() {
         networks,
         onSubmit,
     } = useFreebiesLogic();
+    const router = useRouter();
 
     return (
         <div className="container py-8 bg-gradient-to-br from-green-50 to-white dark:from-black/90 dark:to-black min-h-screen">
@@ -84,7 +85,10 @@ function FreebiesFormContent() {
                                     </p>
                                     <p className="text-xs text-black/80 dark:text-green-200">
                                         All transaction are sponsored on the Lisk network!
+                                    <p onClick={()=>router.push(`https://t.me/+tTNxqnxh5TpjNGE0`)} className="text-xs text-black/80 dark:text-green-200 mt-2 cursor-pointer">
+                                        If you need funds to complete the transaction, please join our Telegram group for assistance.
                                     </p>
+                                        </p>
                                 </div>
 
                                 <Form {...form}>
