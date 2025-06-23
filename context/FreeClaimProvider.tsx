@@ -338,7 +338,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       updateStepStatus('whitelist', 'loading');
       setIsProcessing(true);
 
-      const result = await whitelistSelf(smartAccount.accountAddress as `0x${string}`, smartAccount);
+      const result = await whitelistSelf(user?.wallet?.address as `0x${string}`, smartAccount);
       if (result.success) {
         toast.success("Successfully added to whitelist!");
         updateStepStatus('whitelist', 'success');
@@ -378,7 +378,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       updateStepStatus('attestation', 'loading');
       setIsProcessing(true);
       const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free airtime bundle.`;
-      const result = await submitAttestation( attestationText, smartAccount.accountAddress as `0x${string}`, smartAccount);
+      const result = await submitAttestation( attestationText, user?.wallet?.address as `0x${string}`, smartAccount);
 
       if (result.success) {
         toast.success("Successfully completed attestation!");
@@ -419,7 +419,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       updateStepStatus('claim-ubi', 'loading');
       setIsProcessing(true);
 
-      const result = await claimBundle(smartAccount.accountAddress as `0x${string}`, smartAccount);
+      const result = await claimBundle(user?.wallet?.address as `0x${string}`, smartAccount);
 
       if (result?.success) {
         toast.success("Successfully claimed your free airtime bundle!");
