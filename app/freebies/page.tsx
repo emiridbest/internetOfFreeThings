@@ -86,7 +86,7 @@ function FreebiesFormContent() {
                                     <p className="text-xs text-black/80 dark:text-green-200">
                                         All transaction are sponsored on the Lisk network!
                                     <p onClick={()=>router.push(`https://t.me/+tTNxqnxh5TpjNGE0`)} className="text-xs text-black/80 dark:text-green-200 mt-2 cursor-pointer">
-                                        If you need funds to complete the transaction, please join our Telegram group for assistance.
+                                        If you need funds to complete the transaction, please CLICK HERE to join our Telegram group for assistance.
                                     </p>
                                         </p>
                                 </div>

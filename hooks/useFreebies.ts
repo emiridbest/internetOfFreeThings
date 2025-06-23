@@ -80,6 +80,7 @@ export const useFreebiesLogic = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
+    const [claimNow, setClaimNow] = useState(false);
 
     // Data states
     const [networks, setNetworks] = useState<AirtimeOperator[]>([]);
@@ -308,11 +309,11 @@ export const useFreebiesLogic = () => {
         try {
             await handleClaim();
             updateStepStatus('claim-ubi', 'success');
-
+            
         } catch (error) {
             console.error("Claim failed:", error);
             updateStepStatus('claim-ubi', 'error', "An error occurred during the claim process");
-            return
+            throw error;
         }
     }, [handleClaim, updateStepStatus]);
 
@@ -356,7 +357,7 @@ export const useFreebiesLogic = () => {
             toast.error("There was an error processing your free airtime. Our team has been notified and will resolve this shortly.");
             throw error;
         }
-    }, [networks, cleanPhoneNumber, operatorRange]);
+    }, [networks, cleanPhoneNumber, operatorRange, claimNow]);
 
     const resetFormAfterSuccess = useCallback(() => {
         form.reset({
@@ -424,8 +425,7 @@ export const useFreebiesLogic = () => {
 
             // Step 3: Process claim
             await processClaimStep();
-            toast.success("Claim processed successfully!");
-
+            setClaimNow(true)
             // Step 4: Process airtime top-up
             const topupSuccess = await processAirtimeTopup(values, enteredAmount);
 
