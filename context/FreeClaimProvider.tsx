@@ -343,6 +343,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       console.error("Error whitelisting:", error);
       toast.error("Error during whitelisting. Please try again.");
       updateStepStatus('whitelist', 'error', "Error during whitelisting");
+      throw error;
     } finally {
       setIsProcessing(false);
     }
@@ -363,7 +364,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
         console.error("Could not initialize smart account for attestation:", error);
         toast.error("Could not initialize your wallet. Please try again.");
         updateStepStatus('attestation', 'error', "Failed to initialize wallet");
-        return;
+        throw error;
       }
     }
 
@@ -384,6 +385,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       console.error("Error attesting:", error);
       toast.error("Error during attestation. Please try again.");
       updateStepStatus('attestation', 'error', "Error during attestation");
+      throw error;
     } finally {
       setIsProcessing(false);
     }
@@ -415,20 +417,21 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       const result = await claimBundle(user?.wallet?.address as `0x${string}`);
 
       if (result?.success) {
-        toast.success("Successfully claimed your free airtime bundle!");
         updateStepStatus('claim-ubi', 'success');
       } else if (result) {
         toast.error("You must wait before claiming again");
         updateStepStatus('claim-ubi', 'error', "You must wait before claiming again");
+        
       } else {
         toast.error("Failed to claim airtime bundle");
         updateStepStatus('claim-ubi', 'error', "Failed to claim airtime bundle");
+
       }
     } catch (error) {
       console.error("Error claiming bundle:", error);
       toast.error("Error during claim. Please try again.");
       updateStepStatus('claim-ubi', 'error', "Error during claim process");
-      return;
+      throw error;
     } finally {
       setIsProcessing(false);
     }

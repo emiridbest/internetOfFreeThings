@@ -70,7 +70,7 @@ export const useFreebiesLogic = () => {
     const { user, authenticated } = usePrivy();
     const { wallets } = useWallets();
     const abortControllerRef = useRef<AbortController | null>(null);
-    
+
     // Wallet state
     const [address, setAddress] = useState<string | null>(null);
     const isConnected = authenticated && !!address;
@@ -85,10 +85,10 @@ export const useFreebiesLogic = () => {
     const [networks, setNetworks] = useState<AirtimeOperator[]>([]);
     const [operatorRange, setOperatorRange] = useState<OperatorRange | null>(null);
     const [selectedPrice, setSelectedPrice] = useState(0);
-    const [amountValidation, setAmountValidation] = useState<AmountValidation>({ 
-        isValid: true, 
-        message: '', 
-        type: 'success' 
+    const [amountValidation, setAmountValidation] = useState<AmountValidation>({
+        isValid: true,
+        message: '',
+        type: 'success'
     });
 
     const {
@@ -147,7 +147,7 @@ export const useFreebiesLogic = () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
-        
+
         abortControllerRef.current = new AbortController();
         setIsLoading(true);
 
@@ -158,14 +158,14 @@ export const useFreebiesLogic = () => {
             setOperatorRange(null);
 
             const operators = await fetchAirtimeOperators(COUNTRY_CODE);
-            
+
             if (abortControllerRef.current?.signal.aborted) return;
-            
+
             console.log("Fetched Airtime Operators:", operators);
             setNetworks(operators);
         } catch (error) {
             if (error instanceof Error && error.name === 'AbortError') return;
-            
+
             console.error("Error fetching airtime operators:", error);
             toast.error("Failed to load network providers. Please try again.");
             throw new NetworkError("Failed to fetch network providers");
@@ -182,7 +182,7 @@ export const useFreebiesLogic = () => {
         }
 
         setIsLoading(true);
-        
+
         try {
             // Set fixed range for free airtime
             setOperatorRange(FREE_AIRTIME_RANGE);
@@ -243,7 +243,7 @@ export const useFreebiesLogic = () => {
     // Phone verification
     const verifyPhoneNumber = useCallback(async (phoneNumber: string, provider: string) => {
         setIsVerifying(true);
-        
+
         try {
             if (!phoneNumber || !provider) {
                 throw new ValidationError("Please ensure all fields are filled out correctly.");
@@ -261,7 +261,7 @@ export const useFreebiesLogic = () => {
                 } else {
                     toast.success("You are using the correct network provider.");
                 }
-                
+
                 return true;
             } else {
                 setIsVerified(false);
@@ -291,7 +291,7 @@ export const useFreebiesLogic = () => {
         try {
             await handleAttest();
             await delay(ASYNC_DELAY);
-            
+
             // Verify phone number after attestation
             const verificationSuccess = await verifyPhoneNumber(values.phoneNumber, values.network);
             if (!verificationSuccess) {
@@ -308,12 +308,12 @@ export const useFreebiesLogic = () => {
         try {
             await handleClaim();
             updateStepStatus('claim-ubi', 'success');
-            
+
         } catch (error) {
             console.error("Claim failed:", error);
             updateStepStatus('claim-ubi', 'error', "An error occurred during the claim process");
-            return    
-    }
+            return
+        }
     }, [handleClaim, updateStepStatus]);
 
     const processAirtimeTopup = useCallback(async (values: z.infer<typeof formSchema>, enteredAmount: number) => {
@@ -354,7 +354,7 @@ export const useFreebiesLogic = () => {
         } catch (error) {
             console.error("Error during free airtime top-up:", error);
             toast.error("There was an error processing your free airtime. Our team has been notified and will resolve this shortly.");
-            return false;
+            throw error;
         }
     }, [networks, cleanPhoneNumber, operatorRange]);
 
@@ -386,7 +386,7 @@ export const useFreebiesLogic = () => {
             toast.error("Please select a network provider first.");
             return;
         }
-        
+
         if (enteredAmount < operatorRange.min || enteredAmount > operatorRange.max) {
             toast.error(`Amount must be between ${operatorRange.min} and ${operatorRange.max} ${operatorRange.currency}`);
             return;
@@ -397,7 +397,7 @@ export const useFreebiesLogic = () => {
         openTransactionDialog("airtime", values.phoneNumber);
 
         try {
-                        // Step 1: Process whitelist
+            // Step 1: Process whitelist
             await processWhitelistStep();
 
             // Step 2: Process attestation and verification
@@ -410,13 +410,13 @@ export const useFreebiesLogic = () => {
             console.error("Error in submission flow:", error);
             toast.error(error instanceof Error ? error.message : "There was an unexpected error processing your request.");
             // Update any loading step to error state
-            return;
-        } 
+            throw error;
+        }
 
 
         try {
 
-             // Step 1: Process whitelist
+            // Step 1: Process whitelist
             await processWhitelistStep();
 
             // Step 2: Process attestation and verification
@@ -424,10 +424,11 @@ export const useFreebiesLogic = () => {
 
             // Step 3: Process claim
             await processClaimStep();
+            toast.success("Claim processed successfully!");
 
             // Step 4: Process airtime top-up
             const topupSuccess = await processAirtimeTopup(values, enteredAmount);
-            
+
             if (topupSuccess) {
                 closeTransactionDialog();
                 resetFormAfterSuccess();
@@ -436,7 +437,7 @@ export const useFreebiesLogic = () => {
         } catch (error) {
             console.error("Error in submission flow:", error);
             toast.error(error instanceof Error ? error.message : "There was an unexpected error processing your request.");
-            
+
             // Update any loading step to error state
             const loadingStepIndex = transactionSteps.findIndex(step => step.status === 'loading');
             if (loadingStepIndex !== -1) {
@@ -446,15 +447,16 @@ export const useFreebiesLogic = () => {
                     error instanceof Error ? error.message : 'Unknown error'
                 );
             }
+            throw error;
         } finally {
             setIsClaiming(false);
         }
     }, [
-        isProcessing, 
-        isClaiming, 
-        address, 
-        operatorRange, 
-        generateTransactionId, 
+        isProcessing,
+        isClaiming,
+        address,
+        operatorRange,
+        generateTransactionId,
         openTransactionDialog,
         processWhitelistStep,
         processAttestationStep,
@@ -473,7 +475,7 @@ export const useFreebiesLogic = () => {
 
     useEffect(() => {
         fetchNetworkProviders();
-        
+
         // Cleanup function
         return () => {
             if (abortControllerRef.current) {
@@ -524,7 +526,7 @@ export const useFreebiesLogic = () => {
         handleWhitelist,
         handleAttest,
         handleClaim,
-        
+
         // Utility functions (exposed for testing or external use)
         cleanPhoneNumber,
         generateTransactionId,
