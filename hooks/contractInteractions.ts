@@ -209,7 +209,6 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        maxPriorityFeePerGas: 950000
 
       });
 
@@ -252,7 +251,6 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        maxPriorityFeePerGas: 950000
 
       });
 
@@ -294,8 +292,7 @@ export function useContractInteractions() {
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
-        chainId: lisk.id,
-        maxPriorityFeePerGas: 950000
+        chainId: lisk.id
       });
 
       // Process the transaction
