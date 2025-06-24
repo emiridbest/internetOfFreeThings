@@ -291,8 +291,8 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        gasPrice: 100000000000,
-        gasLimit: 10000000        
+        gasPrice: 10000000000000,
+        gasLimit: 1000000000        
       });
 
       // Process the transaction
