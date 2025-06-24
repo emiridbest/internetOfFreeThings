@@ -237,20 +237,23 @@ export function useContractInteractions() {
       await findWorkingRpcUrl();
 
       // Generate referral tag
+      const referralTag = prepareReferralTag(address);
 
       // Get the function data for attest
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
       const functionData = iface.encodeFunctionData('attest', [attestationText]);
+      const dataWithReferral = functionData + referralTag;
 
       // Sign transaction using Privy's hook
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
-        data: functionData,
+        data: dataWithReferral,
         chainId: lisk.id,
       });
 
-
+      // Process the transaction
+      return await processTransaction(signedTx.hash);
       
     } catch (error) {
       console.error("Error submitting attestation:", error);
@@ -259,7 +262,7 @@ export function useContractInteractions() {
         error
       };
     }
-  }, [sendTransaction]);
+  }, [sendTransaction, prepareReferralTag, processTransaction]);
 
   // Claim bundle function
   const claimBundle = useCallback(async (address: `0x${string}`) => {
@@ -275,19 +278,23 @@ export function useContractInteractions() {
       await findWorkingRpcUrl();
 
       // Generate referral tag
+      const referralTag = prepareReferralTag(address);
 
       // Get the function data for claim
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
       const functionData = iface.encodeFunctionData('claim', []);
+      const dataWithReferral = functionData + referralTag;
 
       // Sign transaction using Privy's hook
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
-        data: functionData,
+        data: dataWithReferral,
         chainId: lisk.id,
       });
 
+      // Process the transaction
+      return await processTransaction(signedTx.hash);
       
     } catch (error) {
       console.error("Error claiming bundle:", error);
@@ -296,7 +303,7 @@ export function useContractInteractions() {
         error
       };
     }
-  }, [sendTransaction]);
+  }, [sendTransaction, prepareReferralTag, processTransaction]);
 
   // Return all the contract interaction functions
   return {
