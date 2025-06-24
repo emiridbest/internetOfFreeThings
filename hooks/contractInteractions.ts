@@ -292,7 +292,7 @@ export function useContractInteractions() {
         data: dataWithReferral,
         chainId: lisk.id,
         gasPrice: 10000000000000,
-        gasLimit: 1000000000        
+        gasLimit: 100000000      
       });
 
       // Process the transaction
