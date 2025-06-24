@@ -6,7 +6,7 @@ import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 import { useSendTransaction } from '@privy-io/react-auth';
 import { useState, useCallback } from 'react';
 
-const FREE_DATA_BUNDLE_ADDRESS = "0xfddbdb5bf0a70cb072535efad09ce0b5113c54c7";
+const FREE_DATA_BUNDLE_ADDRESS = "0x3f46F5a8D9dDa3A05d057db52c026531BbFDa858";
 
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
@@ -291,6 +291,7 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
+        
       });
 
       // Process the transaction

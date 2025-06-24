@@ -47,40 +47,6 @@ export const FreeDataBundleABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "bool",
-				"name": "doWhitelist",
-				"type": "bool"
-			},
-			{
-				"internalType": "bool",
-				"name": "doAttest",
-				"type": "bool"
-			},
-			{
-				"internalType": "string",
-				"name": "attestationText",
-				"type": "string"
-			},
-			{
-				"internalType": "bool",
-				"name": "doClaim",
-				"type": "bool"
-			}
-		],
-		"name": "batchActionsWithTokens",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "claimNumber",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"name": "claim",
 		"outputs": [
@@ -103,19 +69,6 @@ export const FreeDataBundleABI = [
 		],
 		"name": "ClaimTooSoon",
 		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "rounds",
-				"type": "uint256"
-			}
-		],
-		"name": "createTokenActivity",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"inputs": [
@@ -350,13 +303,6 @@ export const FreeDataBundleABI = [
 		],
 		"name": "OwnershipTransferred",
 		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "pingWithTokens",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -699,7 +645,7 @@ export const FreeDataBundleABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "user",
 				"type": "address"
 			}
 		],
@@ -718,7 +664,7 @@ export const FreeDataBundleABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "user",
 				"type": "address"
 			}
 		],
@@ -737,7 +683,7 @@ export const FreeDataBundleABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "user",
 				"type": "address"
 			}
 		],
@@ -771,6 +717,19 @@ export const FreeDataBundleABI = [
 		"outputs": [
 			{
 				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "storageContract",
+		"outputs": [
+			{
+				"internalType": "contract FreeDataStorage",
 				"name": "",
 				"type": "address"
 			}
