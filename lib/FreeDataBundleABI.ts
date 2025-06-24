@@ -280,6 +280,12 @@ export const FreeDataBundleABI = [
 				"internalType": "uint256",
 				"name": "tokensBurned",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
 			}
 		],
 		"name": "BundleClaimed",
@@ -338,6 +344,12 @@ export const FreeDataBundleABI = [
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "reason",
+				"type": "string"
 			}
 		],
 		"name": "TokensForceTransfer",
@@ -454,6 +466,12 @@ export const FreeDataBundleABI = [
 				"internalType": "string",
 				"name": "attestation",
 				"type": "string"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "attestationLength",
+				"type": "uint256"
 			}
 		],
 		"name": "UserAttested",
@@ -479,6 +497,12 @@ export const FreeDataBundleABI = [
 				"internalType": "uint256",
 				"name": "tokensMinted",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "metadata",
+				"type": "string"
 			}
 		],
 		"name": "UserWhitelisted",
@@ -502,6 +526,30 @@ export const FreeDataBundleABI = [
 		"name": "withdrawTokens",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "accessHistory",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -559,17 +607,17 @@ export const FreeDataBundleABI = [
 		"outputs": [
 			{
 				"internalType": "bool",
-				"name": "canClaim",
+				"name": "",
 				"type": "bool"
 			},
 			{
 				"internalType": "uint256",
-				"name": "timeRemaining",
+				"name": "",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "userTokenBalance",
+				"name": "",
 				"type": "uint256"
 			}
 		],
@@ -614,27 +662,27 @@ export const FreeDataBundleABI = [
 		"outputs": [
 			{
 				"internalType": "bool",
-				"name": "isUserWhitelisted",
+				"name": "",
 				"type": "bool"
 			},
 			{
 				"internalType": "bool",
-				"name": "hasUserAttested",
+				"name": "",
 				"type": "bool"
 			},
 			{
 				"internalType": "uint256",
-				"name": "lastUserClaimTime",
+				"name": "",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "nextAvailableClaimTime",
+				"name": "",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "userTokenBalance",
+				"name": "",
 				"type": "uint256"
 			}
 		],
