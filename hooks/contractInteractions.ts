@@ -23,7 +23,7 @@ const findWorkingRpcUrl = async () => {
         chain: lisk,
         transport: http(url)
       });
-      
+
       // Simple health check - try to get the block number
       await client.getBlockNumber();
       console.log(`RPC URL ${url} is working`);
@@ -142,36 +142,36 @@ export const getUserStatus = async (userAddress: `0x${string}`) => {
 // This is where we properly use the useSendTransaction hook
 export function useContractInteractions() {
   const { sendTransaction } = useSendTransaction();
-  
+
   // Common function to prepare referral tag
   const prepareReferralTag = useCallback((address: `0x${string}`) => {
     return getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
       providers: [
-        '0x0423189886d7966f0dd7e7d256898daeee625dca', 
-        '0xc95876688026be9d6fa7a7c33328bd013effa2bb', 
+        '0x0423189886d7966f0dd7e7d256898daeee625dca',
+        '0xc95876688026be9d6fa7a7c33328bd013effa2bb',
         '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'
       ],
     });
   }, []);
-  
+
   // Shared transaction processing logic
   const processTransaction = useCallback(async (txHash: string) => {
     const publicClient = getPublicClient();
-    const receipt = await publicClient.waitForTransactionReceipt({ 
-      hash: txHash as `0x${string}` 
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash as `0x${string}`
     });
-    
+
     if (receipt.status === 'success') {
       console.log('Transaction receipt', receipt);
-      
+
       // Submit referral to Divvi
       await submitReferral({
         txHash: txHash as `0x${string}`,
         chainId: lisk.id,
       });
-      
+
       return {
         success: true,
         hash: txHash,
@@ -209,11 +209,13 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
+        maxPriorityFeePerGas: 950000
+
       });
 
       // Process the transaction
       return await processTransaction(signedTx.hash);
-      
+
     } catch (error) {
       console.error("Error adding to whitelist:", error);
       return {
@@ -249,12 +251,14 @@ export function useContractInteractions() {
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
-        chainId: lisk.id
+        chainId: lisk.id,
+        maxPriorityFeePerGas: 950000
+
       });
 
       // Process the transaction
       return await processTransaction(signedTx.hash);
-      
+
     } catch (error) {
       console.error("Error submitting attestation:", error);
       return {
@@ -291,12 +295,12 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        maxPriorityFeePerGas: 50000     
+        maxPriorityFeePerGas: 950000
       });
 
       // Process the transaction
       return await processTransaction(signedTx.hash);
-      
+
     } catch (error) {
       console.error("Error claiming bundle:", error);
       return {

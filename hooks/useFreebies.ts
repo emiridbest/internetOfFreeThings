@@ -266,7 +266,6 @@ export const useFreebiesLogic = () => {
                     form.setValue('network', verificationResult.correctProviderId);
                     toast.success(verificationResult.message);
                 } else {
-                    toast.success("You are using the correct network provider.");
                 }
 
                 return true;
