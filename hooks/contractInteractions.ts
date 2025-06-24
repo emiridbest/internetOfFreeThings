@@ -249,7 +249,7 @@ export function useContractInteractions() {
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
-        chainId: lisk.id,
+        chainId: lisk.id
       });
 
       // Process the transaction
@@ -291,7 +291,7 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        
+        gasPrice: 1000000000        
       });
 
       // Process the transaction
