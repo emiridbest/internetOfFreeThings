@@ -291,7 +291,7 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        maxPriorityFeePerGas: 1000000000,
+        maxPriorityFeePerGas: 10000000,
         gasPrice: 10000000000000,
         gasLimit: 10000000      
       });
