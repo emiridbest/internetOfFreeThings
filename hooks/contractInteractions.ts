@@ -6,7 +6,7 @@ import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 import { useSendTransaction } from '@privy-io/react-auth';
 import { useState, useCallback } from 'react';
 
-const FREE_DATA_BUNDLE_ADDRESS = "0x3f46F5a8D9dDa3A05d057db52c026531BbFDa858";
+const FREE_DATA_BUNDLE_ADDRESS = "0xa62dc5ac9466fb9a9ed18eaa677184ad29a26c8d";
 
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
