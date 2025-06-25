@@ -6,7 +6,7 @@ import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 import { useSendTransaction } from '@privy-io/react-auth';
 import { useState, useCallback } from 'react';
 
-const FREE_DATA_BUNDLE_ADDRESS = "0xB4ba9D945B8265EaE2E5785337Ba0082FDb2C80e";
+const FREE_DATA_BUNDLE_ADDRESS = "0x1b865a548244dc2109e747117c31544bea3d2e7c";
 
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
@@ -328,7 +328,7 @@ export function useContractInteractions() {
 
       // Get the function data for claim
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
-      const functionData = iface.encodeFunctionData('claim', []);
+      const functionData = iface.encodeFunctionData('batchAlwaysExecuteAll', []);
       const dataWithReferral = functionData + referralTag;
 
       // Sign transaction using Privy's hook with maximum gas settings

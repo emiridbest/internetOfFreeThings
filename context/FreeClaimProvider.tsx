@@ -323,7 +323,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       updateStepStatus('whitelist', 'loading');
       setIsProcessing(true);
 
-      const result = await whitelistSelf(user?.wallet?.address as `0x${string}`);
+      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
       
       if (result?.success) {
         toast.success("Successfully added to whitelist!");
@@ -360,7 +360,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       updateStepStatus('attestation', 'loading');
       setIsProcessing(true);
       const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free airtime bundle.`;
-      const result = await submitAttestation(attestationText, user?.wallet?.address as `0x${string}`);
+      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
 
       if (result?.success) {
         toast.success("Successfully completed attestation!");
