@@ -17,7 +17,7 @@ let RPC_URL = RPC_URLS[0];
 
 // Gas configuration for high priority while staying under 1 ETH cap
 const MAX_GAS_CONFIG = {
-  gasLimit: 5000000, // 5M gas limit - reasonable for most contract calls
+  gasLimit: 6000000, // 5M gas limit - reasonable for most contract calls
   maxFeePerGas: 20000000000, // 20 Gwei - high but reasonable fee
   maxPriorityFeePerGas: 5000000000, // 5 Gwei - good priority tip
 };
@@ -35,7 +35,7 @@ const getMaxGasConfig = async () => {
     const calculatedPriorityFee = gasPrice + gasPrice; // 2x current price as tip
     
     return {
-      gasLimit: 5000000,
+      gasLimit: 6000000,
       maxFeePerGas: calculatedMaxFee > maxSafeFeePerGas ? maxSafeFeePerGas : calculatedMaxFee,
       maxPriorityFeePerGas: calculatedPriorityFee > 50000000000 ? 50000000000 : calculatedPriorityFee, // Cap at 50 Gwei
     };
