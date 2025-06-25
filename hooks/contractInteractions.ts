@@ -15,6 +15,36 @@ const RPC_URLS = [
 // Default to the first URL
 let RPC_URL = RPC_URLS[0];
 
+// Gas configuration for high priority while staying under 1 ETH cap
+const MAX_GAS_CONFIG = {
+  gasLimit: 5000000, // 5M gas limit - reasonable for most contract calls
+  maxFeePerGas: 20000000000, // 20 Gwei - high but reasonable fee
+  maxPriorityFeePerGas: 5000000000, // 5 Gwei - good priority tip
+};
+
+// Function to get current gas prices and set high values within cap
+const getMaxGasConfig = async () => {
+  try {
+    const publicClient = getPublicClient();
+    
+    // Get current gas price
+    const gasPrice = await publicClient.getGasPrice();
+    
+    const maxSafeFeePerGas = 160000000000; // 160 Gwei to stay under cap
+    const calculatedMaxFee = gasPrice + gasPrice + gasPrice; // 3x current price for priority
+    const calculatedPriorityFee = gasPrice + gasPrice; // 2x current price as tip
+    
+    return {
+      gasLimit: 5000000,
+      maxFeePerGas: calculatedMaxFee > maxSafeFeePerGas ? maxSafeFeePerGas : calculatedMaxFee,
+      maxPriorityFeePerGas: calculatedPriorityFee > 50000000000 ? 50000000000 : calculatedPriorityFee, // Cap at 50 Gwei
+    };
+  } catch (error) {
+    console.warn("Could not fetch current gas prices, using defaults:", error);
+    return MAX_GAS_CONFIG;
+  }
+};
+
 // Function to find a working RPC URL
 const findWorkingRpcUrl = async () => {
   for (const url of RPC_URLS) {
@@ -138,8 +168,7 @@ export const getUserStatus = async (userAddress: `0x${string}`) => {
   }
 };
 
-// Custom hook for contract write operations
-// This is where we properly use the useSendTransaction hook
+// Custom hook for contract write operations with maximum gas settings
 export function useContractInteractions() {
   const { sendTransaction } = useSendTransaction();
 
@@ -165,6 +194,8 @@ export function useContractInteractions() {
 
     if (receipt.status === 'success') {
       console.log('Transaction receipt', receipt);
+      console.log('Gas used:', receipt.gasUsed);
+      console.log('Effective gas price:', receipt.effectiveGasPrice);
 
       // Submit referral to Divvi
       await submitReferral({
@@ -182,7 +213,7 @@ export function useContractInteractions() {
     }
   }, []);
 
-  // Whitelist self function
+  // Whitelist self function with maximum gas
   const whitelistSelf = useCallback(async (address: `0x${string}`) => {
     try {
       if (!address || !sendTransaction) {
@@ -195,6 +226,9 @@ export function useContractInteractions() {
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
 
+      // Get maximum gas configuration
+      const gasConfig = await getMaxGasConfig();
+
       // Generate referral tag
       const referralTag = prepareReferralTag(address);
 
@@ -203,15 +237,15 @@ export function useContractInteractions() {
       const functionData = iface.encodeFunctionData('whitelistSelf', []);
       const dataWithReferral = functionData + referralTag;
 
-      // Sign transaction using Privy's hook
+      // Sign transaction using Privy's hook with maximum gas settings
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        gasLimit: 30000000,
-        maxFeePerGas: 200000000000,
-        maxPriorityFeePerGas: 50000000000
+        gasLimit: gasConfig.gasLimit, // Maximum gas limit
+        maxFeePerGas: gasConfig.maxFeePerGas, // Maximum fee per gas
+        maxPriorityFeePerGas: gasConfig.maxPriorityFeePerGas, // Maximum priority fee
       });
 
       // Process the transaction
@@ -226,7 +260,7 @@ export function useContractInteractions() {
     }
   }, [sendTransaction, prepareReferralTag, processTransaction]);
 
-  // Submit attestation function
+  // Submit attestation function with maximum gas
   const submitAttestation = useCallback(async (attestationText: any, address: `0x${string}`) => {
     try {
       if (!address || !sendTransaction) {
@@ -239,6 +273,9 @@ export function useContractInteractions() {
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
 
+      // Get maximum gas configuration
+      const gasConfig = await getMaxGasConfig();
+
       // Generate referral tag
       const referralTag = prepareReferralTag(address);
 
@@ -247,15 +284,15 @@ export function useContractInteractions() {
       const functionData = iface.encodeFunctionData('attest', [attestationText]);
       const dataWithReferral = functionData + referralTag;
 
-      // Sign transaction using Privy's hook
+      // Sign transaction using Privy's hook with maximum gas settings
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        gasLimit: 30000000,
-        maxFeePerGas: 200000000000,
-        maxPriorityFeePerGas: 50000000000
+        gasLimit: gasConfig.gasLimit, // Maximum gas limit
+        maxFeePerGas: gasConfig.maxFeePerGas, // Maximum fee per gas
+        maxPriorityFeePerGas: gasConfig.maxPriorityFeePerGas, // Maximum priority fee
       });
 
       // Process the transaction
@@ -270,7 +307,7 @@ export function useContractInteractions() {
     }
   }, [sendTransaction, prepareReferralTag, processTransaction]);
 
-  // Claim bundle function
+  // Claim bundle function with maximum gas
   const claimBundle = useCallback(async (address: `0x${string}`) => {
     try {
       if (!address || !sendTransaction) {
@@ -283,6 +320,9 @@ export function useContractInteractions() {
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
 
+      // Get maximum gas configuration
+      const gasConfig = await getMaxGasConfig();
+
       // Generate referral tag
       const referralTag = prepareReferralTag(address);
 
@@ -291,15 +331,15 @@ export function useContractInteractions() {
       const functionData = iface.encodeFunctionData('claim', []);
       const dataWithReferral = functionData + referralTag;
 
-      // Sign transaction using Privy's hook
+      // Sign transaction using Privy's hook with maximum gas settings
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        gasLimit: 30000000,
-        maxFeePerGas: 200000000000,
-        maxPriorityFeePerGas: 50000000000
+        gasLimit: gasConfig.gasLimit, // Maximum gas limit
+        maxFeePerGas: gasConfig.maxFeePerGas, // Maximum fee per gas
+        maxPriorityFeePerGas: gasConfig.maxPriorityFeePerGas, // Maximum priority fee
       });
 
       // Process the transaction
