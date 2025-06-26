@@ -499,7 +499,7 @@ const fetchBalance = async () => {
       setIsProcessing(true);
 
       const result = await dispenseETH(user?.wallet?.address as `0x${string}`, smartAccount);
-      
+      await fetchBalance(); // Update balance after dispensing
       if (result?.success) {
         toast.success("Successfully added to DispenETH!");
         return true;
