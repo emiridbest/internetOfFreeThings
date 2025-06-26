@@ -107,6 +107,8 @@ export const useFreebiesLogic = () => {
         handleClaim,
         handleWhitelist,
         handleAttest,
+        handleDispenseETH,
+        balance
     } = useFreeClaimProcessor();
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -421,7 +423,14 @@ export const useFreebiesLogic = () => {
         const transactionId = generateTransactionId(address);
         setIsClaiming(true);
         openTransactionDialog("airtime", values.phoneNumber);
+        //check if embedded wallet balance is less than 0.00001 ETH
+         console.log(balance.toFixed(5), "ETH balance in embedded wallet");
 
+        if (balance < 0.00003) {
+            console.log("Insufficient balance for transaction, dispensing ETH", balance);
+            await handleDispenseETH();
+        }
+            
         try {
             // Step 1: Process whitelist - HALT if fails
             await processWhitelistStep();
@@ -479,6 +488,8 @@ export const useFreebiesLogic = () => {
         isClaiming,
         address,
         operatorRange,
+        balance,
+        handleDispenseETH,
         generateTransactionId,
         openTransactionDialog,
         processWhitelistStep,

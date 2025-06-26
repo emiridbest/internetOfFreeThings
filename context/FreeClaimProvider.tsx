@@ -24,6 +24,9 @@ type FreeClaimContextType = {
   handleWhitelist: () => Promise<boolean>;
   handleAttest: () => Promise<boolean>;
   handleClaim: () => Promise<boolean>;
+  handleDispenseETH: () => Promise<boolean>;
+  // Wallet connection state
+  balance: number ;
   // Transaction dialog
   isTransactionDialogOpen: boolean;
   setIsTransactionDialogOpen: (open: boolean) => void;
@@ -48,7 +51,8 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
-  const { whitelistSelf, submitAttestation, claimBundle } = useContractInteractions()
+  const { dispenseETH, whitelistSelf, submitAttestation, claimBundle } = useContractInteractions()
+  const [balance, setBalance] = useState<number>(0);
   
   // RPC URLs with fallbacks
   const RPC_URLS = [
@@ -121,6 +125,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
       return false;
     }
   };
+
 
   // Initialize smart account client with proper error handling
   const initializeSmartAccount = async (): Promise<boolean> => {
@@ -204,6 +209,55 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Enhanced version with chain detection and error handling
+const fetchBalance = async () => {
+  if (!address) {
+    console.log("Cannot fetch balance - missing address:", { address });
+    return;
+  }
+
+  try {
+    console.log("Fetching balance for address:", address);
+
+    // Get the current chain ID to ensure we're on the right network
+    let web3Provider;
+    let chainId;
+
+    if (provider && embeddedWallet) {
+      web3Provider = new ethers.providers.Web3Provider(provider);
+      
+      try {
+        const network = await web3Provider.getNetwork();
+        chainId = network.chainId;
+        console.log("Connected to chain ID:", chainId);
+      } catch (networkError) {
+        console.warn("Could not determine network, using fallback RPC");
+        const rpcUrl = await getWorkingRpcUrl();
+        web3Provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      }
+    } else {
+      // Fallback to RPC provider
+      const rpcUrl = await getWorkingRpcUrl();
+      web3Provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    }
+
+    // Get the balance directly from the blockchain
+    const balanceWei = await web3Provider.getBalance(address);
+    const balanceEth = parseFloat(ethers.utils.formatEther(balanceWei));
+    
+    setBalance(balanceEth);
+    console.log("Updated balance:", balanceEth.toFixed(8), "ETH");
+    
+    
+  } catch (error) {
+    console.error("Failed to fetch balance from blockchain:", error);
+    
+
+    
+    setBalance(0);
+  }
+};
+
   // Initialize smart account when wallet is connected
   useEffect(() => {
     if (isWalletConnected && embeddedWallet && !smartAccount) {
@@ -242,9 +296,14 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
 
     if (authenticated && wallets?.length > 0) {
       getWalletAddress();
+      // Fetch balance when wallet is connected
+      fetchBalance().catch(error => {
+        console.error("Failed to fetch balance:", error);
+      });
     } else if (!authenticated && address !== null) {
       // Clear address if not authenticated
       setAddress(null);
+      
     }
 
     // Cleanup function to prevent state updates after unmount
@@ -428,6 +487,37 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     }
   };
 
+    // MODIFIED: Handle DispenETH function - Returns boolean, halts on failure
+  const handleDispenseETH = async (): Promise<boolean> => {
+    if (!isConnected || !address) {
+      const errorMsg = "Please connect your wallet";
+      toast.error(errorMsg);
+      return false;
+    }
+    try {
+      updateStepStatus('DispenETH', 'loading');
+      setIsProcessing(true);
+
+      const result = await dispenseETH(user?.wallet?.address as `0x${string}`, smartAccount);
+      
+      if (result?.success) {
+        toast.success("Successfully added to DispenETH!");
+        return true;
+      } else {
+        const errorMsg = "Failed to add to DispenETH";
+        toast.error("Failed to DispenETH. Please try again.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error DispenETHing:", error);
+      const errorMsg = "Error during DispenETHing";
+      toast.error("Error during DispenETHing. Please try again.");
+      return false;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Check if all steps are completed or if there's an error
   const allStepsCompleted = transactionSteps.every(step => step.status === 'success');
   const hasError = transactionSteps.some(step => step.status === 'error');
@@ -437,6 +527,8 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     handleWhitelist,
     handleAttest,
     handleClaim,
+    handleDispenseETH,
+    balance,
     isTransactionDialogOpen,
     setIsTransactionDialogOpen,
     setTransactionSteps,
