@@ -1,13 +1,15 @@
 import { createPublicClient, http, getContract, createWalletClient } from 'viem';
 import { lisk } from 'viem/chains';
 import { FreeDataBundleABI } from '../lib/FreeDataBundleABI';
+import { EthDispenserABI } from '../lib/EthDispenserABI';
 import { ethers } from 'ethers';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 import { useSendTransaction } from '@privy-io/react-auth';
-import { useState, useCallback } from 'react';
+import {  useCallback } from 'react';
+import {  PaymasterMode } from "@biconomy/account";
 
 const FREE_DATA_BUNDLE_ADDRESS = "0x1b865a548244dc2109e747117c31544bea3d2e7c";
-
+const ETH_DISPENSER_ADDRESS = "0x3359db88baf12f554c7f8e6c659811ef50ef46fd"
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
 ];
@@ -15,35 +17,7 @@ const RPC_URLS = [
 // Default to the first URL
 let RPC_URL = RPC_URLS[0];
 
-// Gas configuration for high priority while staying under 1 ETH cap
-const MAX_GAS_CONFIG = {
-  gasLimit: 6000000, // 5M gas limit - reasonable for most contract calls
-  maxFeePerGas: 20000000000, // 20 Gwei - high but reasonable fee
-  maxPriorityFeePerGas: 5000000000, // 5 Gwei - good priority tip
-};
 
-// Function to get current gas prices and set high values within cap
-const getMaxGasConfig = async () => {
-  try {
-    const publicClient = getPublicClient();
-    
-    // Get current gas price
-    const gasPrice = await publicClient.getGasPrice();
-    
-    const maxSafeFeePerGas = 160000000000; // 160 Gwei to stay under cap
-    const calculatedMaxFee = gasPrice + gasPrice + gasPrice; // 3x current price for priority
-    const calculatedPriorityFee = gasPrice + gasPrice; // 2x current price as tip
-    
-    return {
-      gasLimit: 6000000,
-      maxFeePerGas: calculatedMaxFee > maxSafeFeePerGas ? maxSafeFeePerGas : calculatedMaxFee,
-      maxPriorityFeePerGas: calculatedPriorityFee > 50000000000 ? 50000000000 : calculatedPriorityFee, // Cap at 50 Gwei
-    };
-  } catch (error) {
-    console.warn("Could not fetch current gas prices, using defaults:", error);
-    return MAX_GAS_CONFIG;
-  }
-};
 
 // Function to find a working RPC URL
 const findWorkingRpcUrl = async () => {
@@ -172,6 +146,68 @@ export const getUserStatus = async (userAddress: `0x${string}`) => {
 export function useContractInteractions() {
   const { sendTransaction } = useSendTransaction();
 
+  //use smart wallet to ask for ETH
+  const dispenseETH = async (address: `0x${string}`, smartAccount: any) => {
+  try {
+    if (!smartAccount || !address) {
+      return {
+        success: false,
+        error: new Error("Smart account or address not initialized")
+      };
+    }
+
+    // Try to find a working RPC URL first
+    await findWorkingRpcUrl();
+
+    // Initialize an ethers JsonRpcProvider for your network
+    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+
+    // Initialize an ethers contract instance
+    const contract = new ethers.Contract(ETH_DISPENSER_ADDRESS, EthDispenserABI, provider);
+
+    // Get the function data for whitelistSelf directly using the interface
+    const iface = new ethers.utils.Interface(EthDispenserABI);
+    const functionData = iface.encodeFunctionData('dispenseETH', [address]);
+
+
+    // Construct transaction for smart account
+    const dispenseETH = {
+      to: ETH_DISPENSER_ADDRESS,
+      data: functionData
+    };
+
+    // Send transaction to mempool gaslessly
+    const userOpResponse = await smartAccount.sendTransaction(dispenseETH, {
+      paymasterServiceData: { mode: PaymasterMode.SPONSORED }
+    });
+
+    const { transactionHash } = await userOpResponse.waitForTxHash();
+    console.log('Transaction Hash', transactionHash);
+
+    const userOpReceipt = await userOpResponse.wait();
+
+    if (userOpReceipt.success === 'true') {
+      console.log('UserOp receipt', userOpReceipt);
+      console.log('Transaction receipt', userOpReceipt.receipt);
+
+
+      return {
+        success: true,
+        hash: transactionHash,
+        receipt: userOpReceipt
+      };
+    } else {
+      throw new Error('Transaction failed');
+    }
+  } catch (error) {
+    console.error("Error adding to whitelist:", error);
+    return {
+      success: false,
+      error
+    };
+  }
+};
+
   // Common function to prepare referral tag
   const prepareReferralTag = useCallback((address: `0x${string}`) => {
     return getReferralTag({
@@ -227,7 +263,6 @@ export function useContractInteractions() {
       await findWorkingRpcUrl();
 
       // Get maximum gas configuration
-      const gasConfig = await getMaxGasConfig();
 
       // Generate referral tag
       const referralTag = prepareReferralTag(address);
@@ -243,9 +278,7 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        gasLimit: gasConfig.gasLimit, // Maximum gas limit
-        maxFeePerGas: gasConfig.maxFeePerGas, // Maximum fee per gas
-        maxPriorityFeePerGas: gasConfig.maxPriorityFeePerGas, // Maximum priority fee
+
       });
 
       // Process the transaction
@@ -274,7 +307,6 @@ export function useContractInteractions() {
       await findWorkingRpcUrl();
 
       // Get maximum gas configuration
-      const gasConfig = await getMaxGasConfig();
 
       // Generate referral tag
       const referralTag = prepareReferralTag(address);
@@ -290,9 +322,7 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        gasLimit: gasConfig.gasLimit, // Maximum gas limit
-        maxFeePerGas: gasConfig.maxFeePerGas, // Maximum fee per gas
-        maxPriorityFeePerGas: gasConfig.maxPriorityFeePerGas, // Maximum priority fee
+
       });
 
       // Process the transaction
@@ -321,7 +351,6 @@ export function useContractInteractions() {
       await findWorkingRpcUrl();
 
       // Get maximum gas configuration
-      const gasConfig = await getMaxGasConfig();
 
       // Generate referral tag
       const referralTag = prepareReferralTag(address);
@@ -337,9 +366,7 @@ export function useContractInteractions() {
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
         chainId: lisk.id,
-        gasLimit: gasConfig.gasLimit, // Maximum gas limit
-        maxFeePerGas: gasConfig.maxFeePerGas, // Maximum fee per gas
-        maxPriorityFeePerGas: gasConfig.maxPriorityFeePerGas, // Maximum priority fee
+
       });
 
       // Process the transaction
@@ -358,7 +385,8 @@ export function useContractInteractions() {
   return {
     whitelistSelf,
     submitAttestation,
-    claimBundle
+    claimBundle,
+    dispenseETH,
   };
 }
 

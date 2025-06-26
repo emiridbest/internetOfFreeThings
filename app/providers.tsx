@@ -23,7 +23,8 @@ export default function AppProvider({ children }: { children: ReactNode }) {
           },
           defaultChain: lisk,
           supportedChains: [lisk],
-
+        
+          
         }}
       >
             {children}
