@@ -3,10 +3,10 @@ import { lisk } from 'viem/chains';
 import { FreeDataBundleABI } from '../lib/FreeDataBundleABI';
 import { EthDispenserABI } from '../lib/EthDispenserABI';
 import { ethers } from 'ethers';
-import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
+import { getReferralTag, submitReferral } from '@divvi/referral-sdk'
 import { useSendTransaction } from '@privy-io/react-auth';
-import {  useCallback } from 'react';
-import {  PaymasterMode } from "@biconomy/account";
+import { useCallback } from 'react';
+import { PaymasterMode } from "@biconomy/account";
 
 const FREE_DATA_BUNDLE_ADDRESS = "0x1b865a548244dc2109e747117c31544bea3d2e7c";
 const ETH_DISPENSER_ADDRESS = "0x3359db88baf12f554c7f8e6c659811ef50ef46fd"
@@ -148,76 +148,71 @@ export function useContractInteractions() {
 
   //use smart wallet to ask for ETH
   const dispenseETH = async (address: `0x${string}`, smartAccount: any) => {
-  try {
-    if (!smartAccount || !address) {
+    try {
+      if (!smartAccount || !address) {
+        return {
+          success: false,
+          error: new Error("Smart account or address not initialized")
+        };
+      }
+
+      // Try to find a working RPC URL first
+      await findWorkingRpcUrl();
+
+      // Initialize an ethers JsonRpcProvider for your network
+      const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+
+      // Initialize an ethers contract instance
+      const contract = new ethers.Contract(ETH_DISPENSER_ADDRESS, EthDispenserABI, provider);
+
+      // Get the function data for whitelistSelf directly using the interface
+      const iface = new ethers.utils.Interface(EthDispenserABI);
+      const functionData = iface.encodeFunctionData('dispenseETH', [address]);
+
+
+      // Construct transaction for smart account
+      const dispenseETH = {
+        to: ETH_DISPENSER_ADDRESS,
+        data: functionData
+      };
+
+      // Send transaction to mempool gaslessly
+      const userOpResponse = await smartAccount.sendTransaction(dispenseETH, {
+        paymasterServiceData: { mode: PaymasterMode.SPONSORED }
+      });
+
+      const { transactionHash } = await userOpResponse.waitForTxHash();
+      console.log('Transaction Hash', transactionHash);
+
+      const userOpReceipt = await userOpResponse.wait();
+
+      if (userOpReceipt.success === 'true') {
+        console.log('UserOp receipt', userOpReceipt);
+        console.log('Transaction receipt', userOpReceipt.receipt);
+
+
+        return {
+          success: true,
+          hash: transactionHash,
+          receipt: userOpReceipt
+        };
+      } else {
+        throw new Error('Transaction failed');
+      }
+    } catch (error) {
+      console.error("Error adding to whitelist:", error);
       return {
         success: false,
-        error: new Error("Smart account or address not initialized")
+        error
       };
     }
-
-    // Try to find a working RPC URL first
-    await findWorkingRpcUrl();
-
-    // Initialize an ethers JsonRpcProvider for your network
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-
-    // Initialize an ethers contract instance
-    const contract = new ethers.Contract(ETH_DISPENSER_ADDRESS, EthDispenserABI, provider);
-
-    // Get the function data for whitelistSelf directly using the interface
-    const iface = new ethers.utils.Interface(EthDispenserABI);
-    const functionData = iface.encodeFunctionData('dispenseETH', [address]);
-
-
-    // Construct transaction for smart account
-    const dispenseETH = {
-      to: ETH_DISPENSER_ADDRESS,
-      data: functionData
-    };
-
-    // Send transaction to mempool gaslessly
-    const userOpResponse = await smartAccount.sendTransaction(dispenseETH, {
-      paymasterServiceData: { mode: PaymasterMode.SPONSORED }
-    });
-
-    const { transactionHash } = await userOpResponse.waitForTxHash();
-    console.log('Transaction Hash', transactionHash);
-
-    const userOpReceipt = await userOpResponse.wait();
-
-    if (userOpReceipt.success === 'true') {
-      console.log('UserOp receipt', userOpReceipt);
-      console.log('Transaction receipt', userOpReceipt.receipt);
-
-
-      return {
-        success: true,
-        hash: transactionHash,
-        receipt: userOpReceipt
-      };
-    } else {
-      throw new Error('Transaction failed');
-    }
-  } catch (error) {
-    console.error("Error adding to whitelist:", error);
-    return {
-      success: false,
-      error
-    };
-  }
-};
+  };
 
   // Common function to prepare referral tag
   const prepareReferralTag = useCallback((address: `0x${string}`) => {
     return getReferralTag({
       user: address,
       consumer: '0xb82896C4F251ed65186b416dbDb6f6192DFAF926',
-      providers: [
-        '0x0423189886d7966f0dd7e7d256898daeee625dca',
-        '0xc95876688026be9d6fa7a7c33328bd013effa2bb',
-        '0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'
-      ],
     });
   }, []);
 
@@ -338,48 +333,69 @@ export function useContractInteractions() {
   }, [sendTransaction, prepareReferralTag, processTransaction]);
 
   // Claim bundle function with maximum gas
-  const claimBundle = useCallback(async (address: `0x${string}`) => {
+  const claimBundle = useCallback(async (address: `0x${string}`, smartAccount: any) => {
     try {
-      if (!address || !sendTransaction) {
+      if (!address || !sendTransaction || !smartAccount) {
         return {
           success: false,
           error: new Error("Address not provided or sendTransaction hook not available")
         };
       }
-
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
+      const referralTag = prepareReferralTag(smartAccount.accountAddress);
 
-      // Get maximum gas configuration
+      // Initialize an ethers JsonRpcProvider for your network
+      const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
 
-      // Generate referral tag
-      const referralTag = prepareReferralTag(address);
-
-      // Get the function data for claim
+      // Get the function data for whitelistSelf directly using the interface
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
       const functionData = iface.encodeFunctionData('batchAlwaysExecuteAll', []);
       const dataWithReferral = functionData + referralTag;
 
-      // Sign transaction using Privy's hook with maximum gas settings
-      const signedTx = await sendTransaction({
-        from: address,
-        to: FREE_DATA_BUNDLE_ADDRESS,
-        data: dataWithReferral,
-        chainId: lisk.id,
 
+      // Construct transaction for smart account
+      const freeDataClaim = {
+        to: FREE_DATA_BUNDLE_ADDRESS,
+        data: dataWithReferral
+      };
+
+      // Send transaction to mempool gaslessly
+      const userOpResponse = await smartAccount.sendTransaction(freeDataClaim, {
+        paymasterServiceData: { mode: PaymasterMode.SPONSORED }
       });
 
-      // Process the transaction
-      return await processTransaction(signedTx.hash);
+      const { transactionHash } = await userOpResponse.waitForTxHash();
+      console.log('Transaction Hash', transactionHash);
 
-    } catch (error) {
-      console.error("Error claiming bundle:", error);
-      return {
-        success: false,
-        error
-      };
-    }
-  }, [sendTransaction, prepareReferralTag, processTransaction]);
+      const userOpReceipt = await userOpResponse.wait();
+
+      if (userOpReceipt.success === 'true') {
+        console.log('UserOp receipt', userOpReceipt);
+        console.log('Transaction receipt', userOpReceipt.receipt);
+
+        // Submit referral to Divvi
+        await submitReferral({
+          txHash: transactionHash as `0x${string}`,
+          chainId: lisk.id,
+        });
+        return {
+          success: true,
+          hash: transactionHash,
+          receipt: userOpReceipt
+        };
+
+      }
+      
+     } catch (error) {
+        console.error("Error claiming bundle:", error);
+        return {
+          success: false,
+          error
+        };
+      }
+    }, [sendTransaction, prepareReferralTag, processTransaction]);
+
 
   // Return all the contract interaction functions
   return {
