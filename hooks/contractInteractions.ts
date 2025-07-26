@@ -344,7 +344,7 @@ export function useContractInteractions() {
 
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
-      const referralTag = prepareReferralTag(address);
+      const referralTag = prepareReferralTag(smartAccount);
 
       // Initialize an ethers JsonRpcProvider for your network
       const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
