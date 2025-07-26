@@ -169,11 +169,11 @@ export function useContractInteractions() {
       const iface = new ethers.utils.Interface(EthDispenserABI);
       const functionData = iface.encodeFunctionData('dispenseETH', [address]);
 
-
+      const referralTag = prepareReferralTag(smartAccount.accountAddress);
       // Construct transaction for smart account
       const dispenseETH = {
         to: ETH_DISPENSER_ADDRESS,
-        data: functionData
+        data: functionData + referralTag
       };
 
       // Send transaction to mempool gaslessly
@@ -183,7 +183,7 @@ export function useContractInteractions() {
 
       const { transactionHash } = await userOpResponse.waitForTxHash();
       console.log('Transaction Hash', transactionHash);
-
+      await processTransaction(transactionHash);
       const userOpReceipt = await userOpResponse.wait();
 
       if (userOpReceipt.success === 'true') {
@@ -333,69 +333,48 @@ export function useContractInteractions() {
   }, [sendTransaction, prepareReferralTag, processTransaction]);
 
   // Claim bundle function with maximum gas
-  const claimBundle = useCallback(async (address: `0x${string}`, smartAccount: any) => {
+  const claimBundle = useCallback(async (address: `0x${string}`) => {
     try {
-      if (!address || !sendTransaction || !smartAccount) {
+      if (!address || !sendTransaction) {
         return {
           success: false,
           error: new Error("Address not provided or sendTransaction hook not available")
         };
       }
+
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
-      const referralTag = prepareReferralTag(smartAccount.accountAddress);
 
-      // Initialize an ethers JsonRpcProvider for your network
-      const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+      // Get maximum gas configuration
 
-      // Get the function data for whitelistSelf directly using the interface
+      // Generate referral tag
+      const referralTag = prepareReferralTag(address);
+
+      // Get the function data for claim
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
       const functionData = iface.encodeFunctionData('batchAlwaysExecuteAll', []);
       const dataWithReferral = functionData + referralTag;
 
-
-      // Construct transaction for smart account
-      const freeDataClaim = {
+      // Sign transaction using Privy's hook with maximum gas settings
+      const signedTx = await sendTransaction({
+        from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
-        data: dataWithReferral
-      };
+        data: dataWithReferral,
+        chainId: lisk.id,
 
-      // Send transaction to mempool gaslessly
-      const userOpResponse = await smartAccount.sendTransaction(freeDataClaim, {
-        paymasterServiceData: { mode: PaymasterMode.SPONSORED }
       });
 
-      const { transactionHash } = await userOpResponse.waitForTxHash();
-      console.log('Transaction Hash', transactionHash);
+      // Process the transaction
+      return await processTransaction(signedTx.hash);
 
-      const userOpReceipt = await userOpResponse.wait();
-
-      if (userOpReceipt.success === 'true') {
-        console.log('UserOp receipt', userOpReceipt);
-        console.log('Transaction receipt', userOpReceipt.receipt);
-
-        // Submit referral to Divvi
-        await submitReferral({
-          txHash: transactionHash as `0x${string}`,
-          chainId: lisk.id,
-        });
-        return {
-          success: true,
-          hash: transactionHash,
-          receipt: userOpReceipt
-        };
-
-      }
-      
-     } catch (error) {
-        console.error("Error claiming bundle:", error);
-        return {
-          success: false,
-          error
-        };
-      }
-    }, [sendTransaction, prepareReferralTag, processTransaction]);
-
+    } catch (error) {
+      console.error("Error claiming bundle:", error);
+      return {
+        success: false,
+        error
+      };
+    }
+  }, [sendTransaction, prepareReferralTag, processTransaction]);
 
   // Return all the contract interaction functions
   return {

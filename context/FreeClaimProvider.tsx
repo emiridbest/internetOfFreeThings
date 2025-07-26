@@ -382,7 +382,7 @@ const fetchBalance = async () => {
       updateStepStatus('whitelist', 'loading');
       setIsProcessing(true);
 
-      const result = await claimBundle(user?.wallet?.address as `0x${string}`,  smartAccount);
+      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
       
       if (result?.success) {
         toast.success("Successfully added to whitelist!");
@@ -419,7 +419,7 @@ const fetchBalance = async () => {
       updateStepStatus('attestation', 'loading');
       setIsProcessing(true);
       const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free airtime bundle.`;
-      const result = await claimBundle(user?.wallet?.address as `0x${string}`,  smartAccount);
+      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
 
       if (result?.success) {
         toast.success("Successfully completed attestation!");
@@ -456,7 +456,7 @@ const fetchBalance = async () => {
       updateStepStatus('claim-ubi', 'loading');
       setIsProcessing(true);
 
-      const result = await claimBundle(user?.wallet?.address as `0x${string}`, smartAccount);
+      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
 
       if (result?.success) {
         updateStepStatus('claim-ubi', 'success');
