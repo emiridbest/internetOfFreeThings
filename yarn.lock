@@ -807,10 +807,10 @@
   resolved "https://registry.npmjs.org/@date-fns/tz/-/tz-1.2.0.tgz"
   integrity sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg==
 
-"@divvi/referral-sdk@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/@divvi/referral-sdk/-/referral-sdk-2.0.0.tgz"
-  integrity sha512-sR1Oz7eC3LFSs4LZ2x9h6KUYUCyX/y3grpp+26+3nCuDYUSI0oNPgi2B6QSxjFdqQ4jAZXLG7p+srmPFuFo2eQ==
+"@divvi/referral-sdk@^2.3.0":
+  version "2.3.0"
+  resolved "https://registry.npmjs.org/@divvi/referral-sdk/-/referral-sdk-2.3.0.tgz"
+  integrity sha512-2Fc5rJ4L9Txr6tQ8CQmdM0Jp55YE8Wfd63a97AZtVh/leh2k8WzHsyABP/OHThXZBPTnsdw8V4BH85wYPZwJcQ==
 
 "@dynamic-labs-sdk/client@0.0.1-alpha.5":
   version "0.0.1-alpha.5"
