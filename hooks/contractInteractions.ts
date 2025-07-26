@@ -341,10 +341,9 @@ export function useContractInteractions() {
           error: new Error("Address not provided or sendTransaction hook not available")
         };
       }
-
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
-      const referralTag = prepareReferralTag(smartAccount);
+      const referralTag = prepareReferralTag(smartAccount.accountAddress);
 
       // Initialize an ethers JsonRpcProvider for your network
       const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
