@@ -426,7 +426,7 @@ export const useFreebiesLogic = () => {
         //check if embedded wallet balance is less than 0.00001 ETH
          console.log(balance.toFixed(5), "ETH balance in embedded wallet");
 
-        if (balance < 0.00003) {
+        if (balance < 0.0003) {
             console.log("Insufficient balance for transaction, dispensing ETH", balance);
             await handleDispenseETH();
         }
