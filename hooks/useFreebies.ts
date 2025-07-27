@@ -108,6 +108,7 @@ export const useFreebiesLogic = () => {
         handleWhitelist,
         handleAttest,
         handleDispenseETH,
+        handleDepositETH,
         balance
     } = useFreeClaimProcessor();
 
@@ -439,8 +440,22 @@ export const useFreebiesLogic = () => {
                 }
             }
         };
-
+        const recoverExcessETH = async () => {
+            if (balance > 0.001) {
+                console.log(`Excess balance detected: ${balance.toFixed(5)} ETH`);
+                try {
+                    await handleDepositETH();
+                    await delay(2000);
+                } catch (ethError) {
+                    console.error(`Failed to deposit ETH for excess recovery:`, ethError);
+                    throw new TransactionError(`Failed to recover excess ETH`, 'recover');
+                }
+            }
+        };
         try {
+            await recoverExcessETH();
+
+            // Ensure sufficient balance before starting transaction
             await ensureSufficientBalance("transaction sequence");
 
             // Step 1: Process whitelist - HALT if fails
