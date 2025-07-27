@@ -424,14 +424,25 @@ export const useFreebiesLogic = () => {
         setIsClaiming(true);
         openTransactionDialog("airtime", values.phoneNumber);
         //check if embedded wallet balance is less than 0.00001 ETH
-         console.log(balance.toFixed(5), "ETH balance in embedded wallet");
+        console.log(balance.toFixed(5), "ETH balance in embedded wallet");
 
-        if (balance < 0.00003) {
-            console.log("Insufficient balance for transaction, dispensing ETH", balance);
-            await handleDispenseETH();
-        }
-            
+        const ensureSufficientBalance = async (stepName: string) => {
+            console.log(`Checking balance before ${stepName}:`, balance.toFixed(5), "ETH");
+            if (balance < 0.000053) {
+                console.log(`Insufficient balance for ${stepName}, dispensing ETH`);
+                try {
+                    await handleDispenseETH();
+                    await delay(2000);
+                } catch (ethError) {
+                    console.error(`Failed to dispense ETH for ${stepName}:`, ethError);
+                    throw new TransactionError(`Failed to get ETH for ${stepName}`, stepName);
+                }
+            }
+        };
+
         try {
+            await ensureSufficientBalance("transaction sequence");
+
             // Step 1: Process whitelist - HALT if fails
             await processWhitelistStep();
 
@@ -447,7 +458,10 @@ export const useFreebiesLogic = () => {
             toast.error(errorMessage);
             throw new TransactionError(errorMessage, 'claim');
         }
+
         try {
+            await ensureSufficientBalance("transaction sequence");
+
             // Step 1: Process whitelist - HALT if fails
             await processWhitelistStep();
 
