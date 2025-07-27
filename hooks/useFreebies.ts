@@ -428,7 +428,7 @@ export const useFreebiesLogic = () => {
 
         const ensureSufficientBalance = async (stepName: string) => {
             console.log(`Checking balance before ${stepName}:`, balance.toFixed(5), "ETH");
-            if (balance < 0.000053) {
+            if (balance < 0.00003) {
                 console.log(`Insufficient balance for ${stepName}, dispensing ETH`);
                 try {
                     await handleDispenseETH();
