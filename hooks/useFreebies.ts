@@ -476,8 +476,7 @@ export const useFreebiesLogic = () => {
 
             // Only reset form if ALL steps succeed
             closeTransactionDialog();
-            resetFormAfterSuccess();
-            toast.success("All transactions completed successfully!");
+           // resetFormAfterSuccess();
 
         } catch (error) {
             console.error("Transaction failed:", error);
