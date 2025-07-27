@@ -25,6 +25,7 @@ type FreeClaimContextType = {
   handleAttest: () => Promise<boolean>;
   handleClaim: () => Promise<boolean>;
   handleDispenseETH: () => Promise<boolean>;
+  handleDepositETH: () => Promise<boolean>;
   // Wallet connection state
   balance: number ;
   // Transaction dialog
@@ -51,7 +52,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
-  const { dispenseETH, whitelistSelf, submitAttestation, claimBundle } = useContractInteractions()
+  const { dispenseETH, depositETH, whitelistSelf, submitAttestation, claimBundle } = useContractInteractions()
   const [balance, setBalance] = useState<number>(0);
   
   // RPC URLs with fallbacks
@@ -518,6 +519,36 @@ const fetchBalance = async () => {
     }
   };
 
+        // MODIFIED: Handle DepositETH function - Returns boolean, halts on failure
+  const handleDepositETH = async (): Promise<boolean> => {
+    if (!isConnected || !address) {
+      const errorMsg = "Please connect your wallet";
+      toast.error(errorMsg);
+      return false;
+    }
+    try {
+      updateStepStatus('DepositETH', 'loading');
+      setIsProcessing(true);
+
+      const result = await depositETH(user?.wallet?.address as `0x${string}`);
+      await fetchBalance(); // Update balance after Depositsing
+      if (result) {
+        toast.success("Successfully added to DepositETH!");
+        return true;
+      } else {
+        const errorMsg = "Failed to add to DepositETH";
+        toast.error("Failed to DepositETH. Please try again.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error DepositETHing:", error);
+      const errorMsg = "Error during DepositETHing";
+      toast.error("Error during DepositETHing. Please try again.");
+      return false;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
   // Check if all steps are completed or if there's an error
   const allStepsCompleted = transactionSteps.every(step => step.status === 'success');
   const hasError = transactionSteps.some(step => step.status === 'error');
@@ -528,6 +559,7 @@ const fetchBalance = async () => {
     handleAttest,
     handleClaim,
     handleDispenseETH,
+    handleDepositETH,
     balance,
     isTransactionDialogOpen,
     setIsTransactionDialogOpen,
