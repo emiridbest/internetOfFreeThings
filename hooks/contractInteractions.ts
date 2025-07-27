@@ -208,6 +208,7 @@ export function useContractInteractions() {
     }
   };
 
+
   // Common function to prepare referral tag
   const prepareReferralTag = useCallback((address: `0x${string}`) => {
     return getReferralTag({
@@ -377,13 +378,49 @@ export function useContractInteractions() {
       };
     }
   }, [sendTransaction, prepareReferralTag, processTransaction]);
+  // Regular wallet function to deposit ETH
+  // Claim bundle function with maximum gas
+  const depositETH = useCallback(async (address: `0x${string}`) => {
+    try {
+      if (!address || !sendTransaction) {
+        return {
+          success: false,
+          error: new Error("Address not provided or sendTransaction hook not available")
+        };
+      }
 
+      // Try to find a working RPC URL first
+      await findWorkingRpcUrl();
+
+      // Get the function data for claim
+      // Sign transaction using Privy's hook with maximum gas settings
+      const signedTx = await sendTransaction({
+        from: address,
+        to: ETH_DISPENSER_ADDRESS,
+        value: BigInt(1000000000000000), // 0.001 ETH in wei as BigInt
+        chainId: lisk.id,
+
+      });
+
+      // Process the transaction
+      return signedTx
+
+    } catch (error) {
+      console.error("Error claiming bundle:", error);
+      return {
+        success: false,
+        error
+      };
+    }
+  }, [sendTransaction, prepareReferralTag, processTransaction]);
+  
   // Return all the contract interaction functions
   return {
     whitelistSelf,
     submitAttestation,
     claimBundle,
     dispenseETH,
+    depositETH,
   };
 }
 
