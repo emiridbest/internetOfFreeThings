@@ -24,7 +24,7 @@ type FreeClaimContextType = {
   handleWhitelist: () => Promise<boolean>;
   handleAttest: () => Promise<boolean>;
   handleClaim: () => Promise<boolean>;
-  handleDispenseETH: () => Promise<boolean>;
+  handleDispenseETH: (amount: number) => Promise<boolean>;
   handleDepositETH: () => Promise<boolean>;
   // Wallet connection state
   balance: number ;
