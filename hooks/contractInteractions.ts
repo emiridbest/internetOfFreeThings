@@ -9,7 +9,7 @@ import { useCallback } from 'react';
 import { PaymasterMode } from "@biconomy/account";
 
 const FREE_DATA_BUNDLE_ADDRESS = "0x03384BdFd1667dfff62ae9EDA99Fe577DB4e5D25" //"0x1b865a548244dc2109e747117c31544bea3d2e7c";
-const ETH_DISPENSER_ADDRESS = "0x210e0E93b8Ae996dEa835E1494Ef6025613E453d"
+const ETH_DISPENSER_ADDRESS = "0x4db5398bd61161064e966d988ec2588b9fc150ca"
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
 ];
@@ -166,13 +166,13 @@ export function useContractInteractions() {
 
       // Get the function data for whitelistSelf directly using the interface
       const iface = new ethers.utils.Interface(EthDispenserABI);
-      const functionData = iface.encodeFunctionData('dispenseETH', [address]);
+      const functionData = iface.encodeFunctionData('dispenseETH', [address, balance*0.1]);
 
       const referralTag = prepareReferralTag(smartAccount.accountAddress);
       // Construct transaction for smart account
       const dispenseETH = {
         to: ETH_DISPENSER_ADDRESS,
-        value: ethers.utils.parseEther(balance.toString()), // Convert balance to wei
+        data: functionData 
       };
 
       // Send transaction to mempool gaslessly
