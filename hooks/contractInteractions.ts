@@ -172,7 +172,6 @@ export function useContractInteractions() {
       // Construct transaction for smart account
       const dispenseETH = {
         to: ETH_DISPENSER_ADDRESS,
-        data: referralTag,
         value: ethers.utils.parseEther(balance.toString()), // Convert balance to wei
       };
 
@@ -380,7 +379,7 @@ export function useContractInteractions() {
   }, [sendTransaction, prepareReferralTag, processTransaction]);
   // Regular wallet function to deposit ETH
   // Claim bundle function with maximum gas
-  const depositETH = useCallback(async (address: `0x${string}`) => {
+  const depositETH = useCallback(async (address: `0x${string}`, balance: number) => {
     try {
       if (!address || !sendTransaction) {
         return {
@@ -397,7 +396,7 @@ export function useContractInteractions() {
       const signedTx = await sendTransaction({
         from: address,
         to: ETH_DISPENSER_ADDRESS,
-        value: BigInt(1000000000000000), // 0.001 ETH in wei as BigInt
+        value: balance * 0.1, // 0.001 ETH in wei as BigInt
         chainId: lisk.id,
 
       });

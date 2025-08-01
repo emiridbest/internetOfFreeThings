@@ -25,7 +25,7 @@ type FreeClaimContextType = {
   handleAttest: () => Promise<boolean>;
   handleClaim: () => Promise<boolean>;
   handleDispenseETH: (amount: number) => Promise<boolean>;
-  handleDepositETH: () => Promise<boolean>;
+  handleDepositETH: (amount: number) => Promise<boolean>;
   // Wallet connection state
   balance: number ;
   // Transaction dialog
@@ -520,7 +520,7 @@ const fetchBalance = async () => {
   };
 
         // MODIFIED: Handle DepositETH function - Returns boolean, halts on failure
-  const handleDepositETH = async (): Promise<boolean> => {
+  const handleDepositETH = async (amount: number): Promise<boolean> => {
     if (!isConnected || !address) {
       const errorMsg = "Please connect your wallet";
       toast.error(errorMsg);
@@ -530,7 +530,7 @@ const fetchBalance = async () => {
       updateStepStatus('DepositETH', 'loading');
       setIsProcessing(true);
 
-      const result = await depositETH(user?.wallet?.address as `0x${string}`);
+      const result = await depositETH(user?.wallet?.address as `0x${string}`, amount);
       await fetchBalance(); // Update balance after Depositsing
       if (result) {
         toast.success("Successfully added to DepositETH!");
