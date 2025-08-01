@@ -9,7 +9,7 @@ import { useCallback } from 'react';
 import { PaymasterMode } from "@biconomy/account";
 
 const FREE_DATA_BUNDLE_ADDRESS = "0x03384BdFd1667dfff62ae9EDA99Fe577DB4e5D25" //"0x1b865a548244dc2109e747117c31544bea3d2e7c";
-const ETH_DISPENSER_ADDRESS = "0x3359db88baf12f554c7f8e6c659811ef50ef46fd"
+const ETH_DISPENSER_ADDRESS = "0x210e0E93b8Ae996dEa835E1494Ef6025613E453d"
 const RPC_URLS = [
   process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
 ];
@@ -147,7 +147,7 @@ export function useContractInteractions() {
   const { sendTransaction } = useSendTransaction();
 
   //use smart wallet to ask for ETH
-  const dispenseETH = async (address: `0x${string}`, smartAccount: any) => {
+  const dispenseETH = async (address: `0x${string}`, smartAccount: any, balance: number) => {
     try {
       if (!smartAccount || !address) {
         return {
@@ -163,7 +163,6 @@ export function useContractInteractions() {
       const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
 
       // Initialize an ethers contract instance
-      const contract = new ethers.Contract(ETH_DISPENSER_ADDRESS, EthDispenserABI, provider);
 
       // Get the function data for whitelistSelf directly using the interface
       const iface = new ethers.utils.Interface(EthDispenserABI);
@@ -173,7 +172,8 @@ export function useContractInteractions() {
       // Construct transaction for smart account
       const dispenseETH = {
         to: ETH_DISPENSER_ADDRESS,
-        data: functionData + referralTag
+        data: referralTag,
+        value: ethers.utils.parseEther(balance.toString()), // Convert balance to wei
       };
 
       // Send transaction to mempool gaslessly

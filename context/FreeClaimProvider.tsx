@@ -489,7 +489,7 @@ const fetchBalance = async () => {
   };
 
     // MODIFIED: Handle DispenETH function - Returns boolean, halts on failure
-  const handleDispenseETH = async (): Promise<boolean> => {
+  const handleDispenseETH = async (amount: number): Promise<boolean> => {
     if (!isConnected || !address) {
       const errorMsg = "Please connect your wallet";
       toast.error(errorMsg);
@@ -499,7 +499,7 @@ const fetchBalance = async () => {
       updateStepStatus('DispenETH', 'loading');
       setIsProcessing(true);
 
-      const result = await dispenseETH(user?.wallet?.address as `0x${string}`, smartAccount);
+      const result = await dispenseETH(user?.wallet?.address as `0x${string}`, smartAccount, amount);
       await fetchBalance(); // Update balance after dispensing
       if (result?.success) {
         toast.success("Successfully added to DispenETH!");

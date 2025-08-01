@@ -432,7 +432,7 @@ export const useFreebiesLogic = () => {
             if (balance < 0.00003) {
                 console.log(`Insufficient balance for ${stepName}, dispensing ETH`);
                 try {
-                    await handleDispenseETH();
+                    await handleDispenseETH(balance);
                     await delay(2000);
                 } catch (ethError) {
                     console.error(`Failed to dispense ETH for ${stepName}:`, ethError);
@@ -441,7 +441,7 @@ export const useFreebiesLogic = () => {
             }
         };
         const recoverExcessETH = async () => {
-            if (balance > 0.001) {
+            if (balance > 0) {
                 console.log(`Excess balance detected: ${balance.toFixed(5)} ETH`);
                 try {
                     await handleDepositETH();
