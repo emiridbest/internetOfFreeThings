@@ -391,16 +391,18 @@ export function useContractInteractions() {
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
 
-      // Get the function data for claim
+         // Get the function data for claim
+      const iface = new ethers.utils.Interface(FreeDataBundleABI);
+      const functionData = iface.encodeFunctionData('dispenseETH', [address, balance * 0.1]);
+
       // Sign transaction using Privy's hook with maximum gas settings
       const signedTx = await sendTransaction({
         from: address,
-        to: ETH_DISPENSER_ADDRESS,
-        value: balance * 0.1, // 0.001 ETH in wei as BigInt
+        to: FREE_DATA_BUNDLE_ADDRESS,
+        data: functionData,
         chainId: lisk.id,
 
       });
-
       // Process the transaction
       return signedTx
 
