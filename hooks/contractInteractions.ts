@@ -290,7 +290,7 @@ export function useContractInteractions() {
         error
       };
     }
-  }, [sendTransaction, prepareReferralTag, processTransaction]);
+  }, [sendTransaction]);
 
   // Submit attestation function with maximum gas
   const submitAttestation = useCallback(async (attestationText: any, address: `0x${string}`) => {
