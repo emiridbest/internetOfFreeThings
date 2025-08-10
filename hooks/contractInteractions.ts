@@ -282,7 +282,6 @@ export function useContractInteractions() {
       });
 
       // Process the transaction
-      return await processTransaction(signedTx.hash);
 
     } catch (error) {
       console.error("Error adding to whitelist:", error);
