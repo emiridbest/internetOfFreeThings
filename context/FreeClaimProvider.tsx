@@ -24,8 +24,8 @@ type FreeClaimContextType = {
   handleWhitelist: () => Promise<boolean>;
   handleAttest: () => Promise<boolean>;
   handleClaim: () => Promise<boolean>;
-  handleDispenseETH: (amount: number) => Promise<boolean>;
-  handleDepositETH: (amount: number) => Promise<boolean>;
+  handleDispenseETH: () => Promise<boolean>;
+  handleDepositETH: () => Promise<boolean>;
   // Wallet connection state
   balance: number ;
   // Transaction dialog
@@ -57,7 +57,7 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   
   // RPC URLs with fallbacks
   const RPC_URLS = [
-    process.env.NEXT_PUBLIC_RPC_URL!
+    "https://forno.celo.org",
   ];
   
   const [currentRpcUrl, setCurrentRpcUrl] = useState<string>(RPC_URLS[0]);
@@ -383,7 +383,7 @@ const fetchBalance = async () => {
       updateStepStatus('whitelist', 'loading');
       setIsProcessing(true);
 
-      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
+      const result = await whitelistSelf(user?.wallet?.address as `0x${string}`);
       
       if (result?.success) {
         toast.success("Successfully added to whitelist!");
@@ -489,7 +489,7 @@ const fetchBalance = async () => {
   };
 
     // MODIFIED: Handle DispenETH function - Returns boolean, halts on failure
-  const handleDispenseETH = async (amount: number): Promise<boolean> => {
+  const handleDispenseETH = async (): Promise<boolean> => {
     if (!isConnected || !address) {
       const errorMsg = "Please connect your wallet";
       toast.error(errorMsg);
@@ -499,7 +499,7 @@ const fetchBalance = async () => {
       updateStepStatus('DispenETH', 'loading');
       setIsProcessing(true);
 
-      const result = await dispenseETH(user?.wallet?.address as `0x${string}`, smartAccount, amount);
+      const result = await dispenseETH(user?.wallet?.address as `0x${string}`, smartAccount);
       await fetchBalance(); // Update balance after dispensing
       if (result?.success) {
         toast.success("Successfully added to DispenETH!");
@@ -520,7 +520,7 @@ const fetchBalance = async () => {
   };
 
         // MODIFIED: Handle DepositETH function - Returns boolean, halts on failure
-  const handleDepositETH = async (amount: number): Promise<boolean> => {
+  const handleDepositETH = async (): Promise<boolean> => {
     if (!isConnected || !address) {
       const errorMsg = "Please connect your wallet";
       toast.error(errorMsg);
@@ -530,7 +530,7 @@ const fetchBalance = async () => {
       updateStepStatus('DepositETH', 'loading');
       setIsProcessing(true);
 
-      const result = await depositETH(user?.wallet?.address as `0x${string}`, amount);
+      const result = await depositETH(user?.wallet?.address as `0x${string}`);
       await fetchBalance(); // Update balance after Depositsing
       if (result) {
         toast.success("Successfully added to DepositETH!");

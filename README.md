@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 # Free Data Bundles App
 
-This project provides free data bundle services through Lisk.
+This project provides free data bundle services through Base/Celo.
 
 ## Getting Started
 

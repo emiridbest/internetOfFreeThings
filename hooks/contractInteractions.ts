@@ -1,5 +1,5 @@
 import { createPublicClient, http, getContract, createWalletClient } from 'viem';
-import { lisk } from 'viem/chains';
+import { base, } from 'viem/chains';
 import { FreeDataBundleABI } from '../lib/FreeDataBundleABI';
 import { EthDispenserABI } from '../lib/EthDispenserABI';
 import { ethers } from 'ethers';
@@ -8,10 +8,15 @@ import { useSendTransaction } from '@privy-io/react-auth';
 import { useCallback } from 'react';
 import { PaymasterMode } from "@biconomy/account";
 
-const FREE_DATA_BUNDLE_ADDRESS = "0x03384BdFd1667dfff62ae9EDA99Fe577DB4e5D25" //"0x1b865a548244dc2109e747117c31544bea3d2e7c";
-const ETH_DISPENSER_ADDRESS = "0x4db5398bd61161064e966d988ec2588b9fc150ca"
+const FREE_DATA_BUNDLE_ADDRESS = "0x8c1FEe2C5B7679CAa62ffC8B530A50eAacc1B816" //"0x1b865a548244dc2109e747117c31544bea3d2e7c";
+const ETH_DISPENSER_ADDRESS = "0x4f6a4d0C72dc5C8d712B3fAFf28D82B86b8b0eA4"
+// Base mainnet public RPC endpoints (Forno is Celo, not Base)
 const RPC_URLS = [
-  process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.api.lisk.com",
+  "https://mainnet.base.org",
+  "https://base.publicnode.com",
+  "https://rpc.ankr.com/base",
+  "https://1rpc.io/base",
+  "https://base.llamarpc.com"
 ];
 
 // Default to the first URL
@@ -24,7 +29,7 @@ const findWorkingRpcUrl = async () => {
   for (const url of RPC_URLS) {
     try {
       const client = createPublicClient({
-        chain: lisk,
+        chain: base,
         transport: http(url)
       });
 
@@ -46,7 +51,7 @@ const findWorkingRpcUrl = async () => {
 // Create a public client for read operations
 export const getPublicClient = () => {
   return createPublicClient({
-    chain: lisk,
+    chain: base,
     transport: http(RPC_URL)
   });
 };
@@ -55,7 +60,7 @@ export const getPublicClient = () => {
 export const getWalletClient = (address: `0x${string}`) => {
   return createWalletClient({
     account: address,
-    chain: lisk,
+    chain: base,
     transport: http(RPC_URL)
   });
 };
@@ -147,7 +152,7 @@ export function useContractInteractions() {
   const { sendTransaction } = useSendTransaction();
 
   //use smart wallet to ask for ETH
-  const dispenseETH = async (address: `0x${string}`, smartAccount: any, balance: number) => {
+  const dispenseETH = async (address: `0x${string}`, smartAccount: any) => {
     try {
       if (!smartAccount || !address) {
         return {
@@ -163,16 +168,17 @@ export function useContractInteractions() {
       const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
 
       // Initialize an ethers contract instance
+      const contract = new ethers.Contract(ETH_DISPENSER_ADDRESS, EthDispenserABI, provider);
 
       // Get the function data for whitelistSelf directly using the interface
       const iface = new ethers.utils.Interface(EthDispenserABI);
-      const functionData = iface.encodeFunctionData('dispenseETH', [address, balance*0.1]);
+      const functionData = iface.encodeFunctionData('dispenseETH', [address]);
 
       const referralTag = prepareReferralTag(smartAccount.accountAddress);
       // Construct transaction for smart account
       const dispenseETH = {
         to: ETH_DISPENSER_ADDRESS,
-        data: functionData 
+        data: functionData + referralTag
       };
 
       // Send transaction to mempool gaslessly
@@ -231,7 +237,7 @@ export function useContractInteractions() {
       // Submit referral to Divvi
       await submitReferral({
         txHash: txHash as `0x${string}`,
-        chainId: lisk.id,
+        chainId: base.id,
       });
 
       return {
@@ -260,19 +266,17 @@ export function useContractInteractions() {
       // Get maximum gas configuration
 
       // Generate referral tag
-      const referralTag = prepareReferralTag(address);
 
       // Get the function data for whitelistSelf
       const iface = new ethers.utils.Interface(FreeDataBundleABI);
-      const functionData = iface.encodeFunctionData('whitelistSelf', []);
-      const dataWithReferral = functionData + referralTag;
+      const functionData = iface.encodeFunctionData('increment', []);
 
       // Sign transaction using Privy's hook with maximum gas settings
       const signedTx = await sendTransaction({
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
-        data: dataWithReferral,
-        chainId: lisk.id,
+        data: functionData,
+        chainId: base.id,
     
 
       });
@@ -317,8 +321,7 @@ export function useContractInteractions() {
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
-        chainId: lisk.id,
-    
+        chainId: base.id,
 
       });
 
@@ -362,7 +365,7 @@ export function useContractInteractions() {
         from: address,
         to: FREE_DATA_BUNDLE_ADDRESS,
         data: dataWithReferral,
-        chainId: lisk.id,
+        chainId: base.id,
 
       });
 
@@ -379,7 +382,7 @@ export function useContractInteractions() {
   }, [sendTransaction, prepareReferralTag, processTransaction]);
   // Regular wallet function to deposit ETH
   // Claim bundle function with maximum gas
-  const depositETH = useCallback(async (address: `0x${string}`, balance: number) => {
+  const depositETH = useCallback(async (address: `0x${string}`) => {
     try {
       if (!address || !sendTransaction) {
         return {
@@ -391,18 +394,16 @@ export function useContractInteractions() {
       // Try to find a working RPC URL first
       await findWorkingRpcUrl();
 
-         // Get the function data for claim
-      const iface = new ethers.utils.Interface(FreeDataBundleABI);
-      const functionData = iface.encodeFunctionData('dispenseETH', [address, balance * 0.1]);
-
+      // Get the function data for claim
       // Sign transaction using Privy's hook with maximum gas settings
       const signedTx = await sendTransaction({
         from: address,
-        to: FREE_DATA_BUNDLE_ADDRESS,
-        data: functionData,
-        chainId: lisk.id,
+        to: ETH_DISPENSER_ADDRESS,
+        value: BigInt(1000000000000000), // 0.001 ETH in wei as BigInt
+        chainId: base.id,
 
       });
+
       // Process the transaction
       return signedTx
 
