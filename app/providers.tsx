@@ -20,7 +20,7 @@ export default function AppProvider({ children }: { children: ReactNode }) {
           logo: 'https://www.freethings.xyz/favicon.ico',
         },
         embeddedWallets: {
-          createOnLogin: "all-users",
+          createOnLogin: "users-without-wallets",
         },
         defaultChain: base,
         supportedChains: [base],
