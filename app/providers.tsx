@@ -1,6 +1,6 @@
 "use client";
 import { http } from "viem";
-import { base } from "viem/chains";
+import { lisk } from "viem/chains";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { ReactNode } from "react";
 
@@ -22,8 +22,8 @@ export default function AppProvider({ children }: { children: ReactNode }) {
         embeddedWallets: {
           createOnLogin: "users-without-wallets",
         },
-        defaultChain: base,
-        supportedChains: [base],
+        defaultChain: lisk,
+        supportedChains: [lisk],
         ...(typeof window !== 'undefined' ? {
           walletConnect: {
             projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined,

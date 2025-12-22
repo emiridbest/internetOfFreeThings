@@ -84,7 +84,7 @@ function FreebiesFormContent() {
                                         Get 50-60 NGN worth of airtime absolutely free!
                                     </p>
                                     <p className="text-xs text-black/80 dark:text-green-200">
-                                        All transaction are sponsored on the Base/Celo networks!
+                                        All transaction are sponsored on the Lisk networks!
                                     <p onClick={()=>router.push(`https://t.me/+tTNxqnxh5TpjNGE0`)} className="text-xs text-black/80 dark:text-green-200 mt-2 cursor-pointer">
                                         If you need funds to complete the transaction, please CLICK HERE to join our Telegram group for assistance.
                                     </p>

@@ -5,7 +5,13 @@ import { toast } from 'sonner';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { createSmartAccountClient, PaymasterMode } from "@biconomy/account";
 
-import useContractInteractions from '@/hooks/contractInteractions';
+import {
+  getUserStatus,
+  whitelistSelf,
+  submitAttestation,
+  claimBundle,
+  findWorkingRpcUrl
+} from '@/hooks/contractInteractions';
 import {
   Dialog,
   DialogContent,
@@ -21,13 +27,9 @@ import { ethers } from 'ethers';
 
 type FreeClaimContextType = {
   isProcessing: boolean;
-  handleWhitelist: () => Promise<boolean>;
-  handleAttest: () => Promise<boolean>;
-  handleClaim: () => Promise<boolean>;
-  handleDispenseETH: () => Promise<boolean>;
-  handleDepositETH: () => Promise<boolean>;
-  // Wallet connection state
-  balance: number ;
+  handleWhitelist: () => Promise<void>;
+  handleAttest: () => Promise<void>;
+  handleClaim: () => Promise<void>;
   // Transaction dialog
   isTransactionDialogOpen: boolean;
   setIsTransactionDialogOpen: (open: boolean) => void;
@@ -52,12 +54,10 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [provider, setProvider] = useState<any>(null);
   const [smartAccount, setSmartAccount] = useState<any>(null);
-  const { dispenseETH, depositETH, whitelistSelf, submitAttestation, claimBundle } = useContractInteractions()
-  const [balance, setBalance] = useState<number>(0);
   
   // RPC URLs with fallbacks
   const RPC_URLS = [
-    "https://forno.celo.org",
+    process.env.NEXT_PUBLIC_RPC_URL!
   ];
   
   const [currentRpcUrl, setCurrentRpcUrl] = useState<string>(RPC_URLS[0]);
@@ -127,30 +127,28 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
     }
   };
 
-
   // Initialize smart account client with proper error handling
-  const initializeSmartAccount = async (): Promise<boolean> => {
+  const initializeSmartAccount = async () => {
     if (!embeddedWallet) {
-      console.error("No wallet provided");
-      return false;
+      throw new Error("No wallet provided");
     }
 
     try {
       // First connect the wallet
       const connected = await connectWallet(embeddedWallet);
       if (!connected) {
-        console.error("Failed to connect wallet");
-        return false;
+        throw new Error("Failed to connect wallet");
       }
       
       // Get a working RPC URL
       await getWorkingRpcUrl();
-      
+      await findWorkingRpcUrl(); // Also update the RPC URL in contractInteractions.ts
+      console.log("Using RPC URL for smart account:", currentRpcUrl);
       let ethersProvider;
       try {
         // Get Ethereum provider from wallet
         const provider = await embeddedWallet.getEthereumProvider();
-        
+        console.log("Obtained Ethereum provider from wallet:", provider);
         // Request accounts explicitly to force connection
         if (provider && typeof provider.request === 'function') {
           try {
@@ -164,19 +162,19 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
         ethersProvider = new ethers.providers.Web3Provider(provider);
       } catch (providerError) {
         console.error("Failed to create Web3Provider:", providerError);
-        return false;
+        throw new Error("Could not initialize wallet provider");
       }
       
       if (!ethersProvider) {
-        console.error("Could not initialize ethers provider");
-        return false;
+        throw new Error("Could not initialize ethers provider");
       }
       
       // Get signer
       const ethersSigner = ethersProvider.getSigner();
-      
+      console.log("Obtained ethers signer:", ethersSigner);
       // Set proper defaults for Smart Account creation
       const biconomyBundlerUrl = process.env.NEXT_PUBLIC_BICONOMY_BUNDLER_URL!;
+      
       const biconomyPaymasterUrl = process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_KEY!; 
 
       console.log("Creating smart account with:", {
@@ -193,71 +191,22 @@ export function FreeClaimProvider({ children }: { children: ReactNode }) {
         });
 
         if (!smartAccountClient) {
-          console.error("Smart account client returned null");
-          return false;
+          throw new Error("Smart account client returned null");
         }
 
         setSmartAccount(smartAccountClient);
         console.log("Smart account initialized successfully");
-        return true;
+        return smartAccountClient;
       } catch (smartAccountError) {
         console.error("Error creating smart account client:", smartAccountError);
-        return false;
+        throw new Error("Failed to initialize smart account: " + 
+                      (smartAccountError instanceof Error ? smartAccountError.message : "Unknown error"));
       }
     } catch (error) {
       console.error("Failed to initialize smart account:", error);
-      return false;
+      throw error;
     }
   };
-
-  // Enhanced version with chain detection and error handling
-const fetchBalance = async () => {
-  if (!address) {
-    console.log("Cannot fetch balance - missing address:", { address });
-    return;
-  }
-
-  try {
-    console.log("Fetching balance for address:", address);
-
-    // Get the current chain ID to ensure we're on the right network
-    let web3Provider;
-    let chainId;
-
-    if (provider && embeddedWallet) {
-      web3Provider = new ethers.providers.Web3Provider(provider);
-      
-      try {
-        const network = await web3Provider.getNetwork();
-        chainId = network.chainId;
-        console.log("Connected to chain ID:", chainId);
-      } catch (networkError) {
-        console.warn("Could not determine network, using fallback RPC");
-        const rpcUrl = await getWorkingRpcUrl();
-        web3Provider = new ethers.providers.JsonRpcProvider(rpcUrl);
-      }
-    } else {
-      // Fallback to RPC provider
-      const rpcUrl = await getWorkingRpcUrl();
-      web3Provider = new ethers.providers.JsonRpcProvider(rpcUrl);
-    }
-
-    // Get the balance directly from the blockchain
-    const balanceWei = await web3Provider.getBalance(address);
-    const balanceEth = parseFloat(ethers.utils.formatEther(balanceWei));
-    
-    setBalance(balanceEth);
-    console.log("Updated balance:", balanceEth.toFixed(8), "ETH");
-    
-    
-  } catch (error) {
-    console.error("Failed to fetch balance from blockchain:", error);
-    
-
-    
-    setBalance(0);
-  }
-};
 
   // Initialize smart account when wallet is connected
   useEffect(() => {
@@ -297,14 +246,9 @@ const fetchBalance = async () => {
 
     if (authenticated && wallets?.length > 0) {
       getWalletAddress();
-      // Fetch balance when wallet is connected
-      fetchBalance().catch(error => {
-        console.error("Failed to fetch balance:", error);
-      });
     } else if (!authenticated && address !== null) {
       // Clear address if not authenticated
       setAddress(null);
-      
     }
 
     // Cleanup function to prevent state updates after unmount
@@ -371,184 +315,131 @@ const fetchBalance = async () => {
     }
   };
 
-  // MODIFIED: Handle whitelist function - Returns boolean, halts on failure
-  const handleWhitelist = async (): Promise<boolean> => {
+  // Handle whitelist function - First step
+  const handleWhitelist = async () => {
     if (!isConnected || !address) {
-      const errorMsg = "Please connect your wallet";
-      toast.error(errorMsg);
-      updateStepStatus('whitelist', 'error', errorMsg);
-      return false;
+      toast.error("Please connect your wallet");
+      return;
     }
+
+    // Initialize smart account if not already initialized
+    if (!smartAccount) {
+      try {
+        await initializeSmartAccount();
+      } catch (error) {
+        console.error("Could not initialize smart account for whitelist:", error);
+        toast.error("Could not initialize your wallet. Please try again.");
+        updateStepStatus('whitelist', 'error', "Failed to initialize wallet");
+        return;
+      }
+    }
+
     try {
       updateStepStatus('whitelist', 'loading');
       setIsProcessing(true);
 
-      const result = await whitelistSelf(user?.wallet?.address as `0x${string}`);
-      
-      if (result?.success) {
+      const result = await whitelistSelf(smartAccount.accountAddress as `0x${string}`, smartAccount);
+      if (result.success) {
         toast.success("Successfully added to whitelist!");
         updateStepStatus('whitelist', 'success');
-        return true;
       } else {
-        const errorMsg = "Failed to add to whitelist";
         toast.error("Failed to whitelist. Please try again.");
-        updateStepStatus('whitelist', 'error', errorMsg);
-        return false;
+        updateStepStatus('whitelist', 'error', "Failed to add to whitelist");
       }
     } catch (error) {
       console.error("Error whitelisting:", error);
-      const errorMsg = "Error during whitelisting";
       toast.error("Error during whitelisting. Please try again.");
-      updateStepStatus('whitelist', 'error', errorMsg);
-      return false;
+      updateStepStatus('whitelist', 'error', "Error during whitelisting");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // MODIFIED: Handle attestation function - Returns boolean, halts on failure
-  const handleAttest = async (): Promise<boolean> => {
+  // Handle attestation function - Second step
+  const handleAttest = async () => {
     if (!isConnected || !address) {
-      const errorMsg = "Please connect your wallet";
-      toast.error(errorMsg);
-      updateStepStatus('attestation', 'error', errorMsg);
-      return false;
+      toast.error("Please connect your wallet");
+      return;
     }
     
+    // Initialize smart account if not already initialized
+    if (!smartAccount) {
+      try {
+        await initializeSmartAccount();
+      } catch (error) {
+        console.error("Could not initialize smart account for attestation:", error);
+        toast.error("Could not initialize your wallet. Please try again.");
+        updateStepStatus('attestation', 'error', "Failed to initialize wallet");
+        return;
+      }
+    }
 
     try {
       updateStepStatus('attestation', 'loading');
       setIsProcessing(true);
       const attestationText = `I, ${user?.wallet?.address}, attest that I am eligible for the free airtime bundle.`;
-      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
+      const result = await submitAttestation( attestationText, smartAccount.accountAddress as `0x${string}`, smartAccount);
 
-      if (result?.success) {
+      if (result.success) {
         toast.success("Successfully completed attestation!");
         updateStepStatus('attestation', 'success');
-        return true;
       } else {
-        const errorMsg = "Failed to complete attestation";
         toast.error("Failed to attest. Please try again.");
-        updateStepStatus('attestation', 'error', errorMsg);
-        return false;
+        updateStepStatus('attestation', 'error', "Failed to complete attestation");
       }
     } catch (error) {
       console.error("Error attesting:", error);
-      const errorMsg = "Error during attestation";
       toast.error("Error during attestation. Please try again.");
-      updateStepStatus('attestation', 'error', errorMsg);
-      return false;
+      updateStepStatus('attestation', 'error', "Error during attestation");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // MODIFIED: Handle claim bundle logic - Returns boolean, halts on failure
-  const handleClaim = async (): Promise<boolean> => {
+  // Handle claim bundle logic - Final step
+  const handleClaim = async () => {
     if (!isConnected || !address) {
-      const errorMsg = "Please connect your wallet";
-      toast.error(errorMsg);
-      updateStepStatus('claim-ubi', 'error', errorMsg);
-      return false;
+      toast.error("Please connect your wallet");
+      return;
     }
 
+    // Initialize smart account if not already initialized
+    if (!smartAccount) {
+      try {
+        await initializeSmartAccount();
+      } catch (error) {
+        console.error("Could not initialize smart account for claim:", error);
+        toast.error("Could not initialize your wallet. Please try again.");
+        updateStepStatus('claim-ubi', 'error', "Failed to initialize wallet");
+        return;
+      }
+    }
 
     try {
       updateStepStatus('claim-ubi', 'loading');
       setIsProcessing(true);
 
-      const result = await claimBundle(user?.wallet?.address as `0x${string}`);
+      const result = await claimBundle(smartAccount.accountAddress as `0x${string}`, smartAccount);
 
       if (result?.success) {
+        toast.success("Successfully claimed your free airtime bundle!");
         updateStepStatus('claim-ubi', 'success');
-        return true;
+      } else if (result?.isClaimTooSoonError) {
+        toast.error("You must wait before claiming again");
+        updateStepStatus('claim-ubi', 'error', "You must wait before claiming again");
       } else {
-        let errorMsg = "Failed to claim airtime bundle";
-        
-        // Check if it's a specific error about waiting
-        if (!result || (result && !result.success)) {
-          // You can customize this based on your contract's error responses
-          const waitingError = "You must wait before claiming again";
-          toast.error(waitingError);
-          updateStepStatus('claim-ubi', 'error', waitingError);
-        } else {
-          toast.error(errorMsg);
-          updateStepStatus('claim-ubi', 'error', errorMsg);
-        }
-        return false;
+        toast.error("Failed to claim airtime bundle");
+        updateStepStatus('claim-ubi', 'error', "Failed to claim airtime bundle");
       }
     } catch (error) {
       console.error("Error claiming bundle:", error);
-      const errorMsg = "Error during claim process";
       toast.error("Error during claim. Please try again.");
-      updateStepStatus('claim-ubi', 'error', errorMsg);
-      return false;
+      updateStepStatus('claim-ubi', 'error', "Error during claim process");
     } finally {
       setIsProcessing(false);
     }
   };
 
-    // MODIFIED: Handle DispenETH function - Returns boolean, halts on failure
-  const handleDispenseETH = async (): Promise<boolean> => {
-    if (!isConnected || !address) {
-      const errorMsg = "Please connect your wallet";
-      toast.error(errorMsg);
-      return false;
-    }
-    try {
-      updateStepStatus('DispenETH', 'loading');
-      setIsProcessing(true);
-
-      const result = await dispenseETH(user?.wallet?.address as `0x${string}`, smartAccount);
-      await fetchBalance(); // Update balance after dispensing
-      if (result?.success) {
-        toast.success("Successfully added to DispenETH!");
-        return true;
-      } else {
-        const errorMsg = "Failed to add to DispenETH";
-        toast.error("Failed to DispenETH. Please try again.");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error DispenETHing:", error);
-      const errorMsg = "Error during DispenETHing";
-      toast.error("Error during DispenETHing. Please try again.");
-      return false;
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-        // MODIFIED: Handle DepositETH function - Returns boolean, halts on failure
-  const handleDepositETH = async (): Promise<boolean> => {
-    if (!isConnected || !address) {
-      const errorMsg = "Please connect your wallet";
-      toast.error(errorMsg);
-      return false;
-    }
-    try {
-      updateStepStatus('DepositETH', 'loading');
-      setIsProcessing(true);
-
-      const result = await depositETH(user?.wallet?.address as `0x${string}`);
-      await fetchBalance(); // Update balance after Depositsing
-      if (result) {
-        toast.success("Successfully added to DepositETH!");
-        return true;
-      } else {
-        const errorMsg = "Failed to add to DepositETH";
-        toast.error("Failed to DepositETH. Please try again.");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error DepositETHing:", error);
-      const errorMsg = "Error during DepositETHing";
-      toast.error("Error during DepositETHing. Please try again.");
-      return false;
-    } finally {
-      setIsProcessing(false);
-    }
-  };
   // Check if all steps are completed or if there's an error
   const allStepsCompleted = transactionSteps.every(step => step.status === 'success');
   const hasError = transactionSteps.some(step => step.status === 'error');
@@ -558,9 +449,6 @@ const fetchBalance = async () => {
     handleWhitelist,
     handleAttest,
     handleClaim,
-    handleDispenseETH,
-    handleDepositETH,
-    balance,
     isTransactionDialogOpen,
     setIsTransactionDialogOpen,
     setTransactionSteps,

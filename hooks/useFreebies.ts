@@ -66,18 +66,11 @@ class NetworkError extends Error {
     }
 }
 
-class TransactionError extends Error {
-    constructor(message: string, public step: string) {
-        super(message);
-        this.name = 'TransactionError';
-    }
-}
-
 export const useFreebiesLogic = () => {
     const { user, authenticated } = usePrivy();
     const { wallets } = useWallets();
     const abortControllerRef = useRef<AbortController | null>(null);
-
+    
     // Wallet state
     const [address, setAddress] = useState<string | null>(null);
     const isConnected = authenticated && !!address;
@@ -92,10 +85,10 @@ export const useFreebiesLogic = () => {
     const [networks, setNetworks] = useState<AirtimeOperator[]>([]);
     const [operatorRange, setOperatorRange] = useState<OperatorRange | null>(null);
     const [selectedPrice, setSelectedPrice] = useState(0);
-    const [amountValidation, setAmountValidation] = useState<AmountValidation>({
-        isValid: true,
-        message: '',
-        type: 'success'
+    const [amountValidation, setAmountValidation] = useState<AmountValidation>({ 
+        isValid: true, 
+        message: '', 
+        type: 'success' 
     });
 
     const {
@@ -107,9 +100,6 @@ export const useFreebiesLogic = () => {
         handleClaim,
         handleWhitelist,
         handleAttest,
-        handleDispenseETH,
-        handleDepositETH,
-        balance
     } = useFreeClaimProcessor();
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -157,7 +147,7 @@ export const useFreebiesLogic = () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
-
+        
         abortControllerRef.current = new AbortController();
         setIsLoading(true);
 
@@ -168,14 +158,14 @@ export const useFreebiesLogic = () => {
             setOperatorRange(null);
 
             const operators = await fetchAirtimeOperators(COUNTRY_CODE);
-
+            
             if (abortControllerRef.current?.signal.aborted) return;
-
+            
             console.log("Fetched Airtime Operators:", operators);
             setNetworks(operators);
         } catch (error) {
             if (error instanceof Error && error.name === 'AbortError') return;
-
+            
             console.error("Error fetching airtime operators:", error);
             toast.error("Failed to load network providers. Please try again.");
             throw new NetworkError("Failed to fetch network providers");
@@ -192,7 +182,7 @@ export const useFreebiesLogic = () => {
         }
 
         setIsLoading(true);
-
+        
         try {
             // Set fixed range for free airtime
             setOperatorRange(FREE_AIRTIME_RANGE);
@@ -253,7 +243,7 @@ export const useFreebiesLogic = () => {
     // Phone verification
     const verifyPhoneNumber = useCallback(async (phoneNumber: string, provider: string) => {
         setIsVerifying(true);
-
+        
         try {
             if (!phoneNumber || !provider) {
                 throw new ValidationError("Please ensure all fields are filled out correctly.");
@@ -269,81 +259,64 @@ export const useFreebiesLogic = () => {
                     form.setValue('network', verificationResult.correctProviderId);
                     toast.success(verificationResult.message);
                 } else {
+                    toast.success("You are using the correct network provider.");
                 }
-
+                
                 return true;
             } else {
                 setIsVerified(false);
                 toast.error("Phone number verification failed. Please double-check the phone number.");
-                throw new ValidationError("Phone number verification failed");
+                return false;
             }
         } catch (error) {
             console.error("Error during verification:", error);
-            const errorMessage = error instanceof Error ? error.message : "Verification failed";
-            toast.error(errorMessage);
-            throw new TransactionError(errorMessage, 'verification');
+            toast.error(error instanceof Error ? error.message : "Verification failed");
+            return false;
         } finally {
             setIsVerifying(false);
         }
     }, [form]);
 
-    // Transaction processing with boolean returns and proper error handling
-    const processWhitelistStep = useCallback(async (): Promise<boolean> => {
+    // Transaction processing
+    const processWhitelistStep = useCallback(async () => {
         try {
-            const success = await handleWhitelist();
-            if (success) {
-                await delay(ASYNC_DELAY);
-                return true;
-            } else {
-                throw new TransactionError("Whitelist process failed", 'whitelist');
-            }
+            await handleWhitelist();
+            await delay(ASYNC_DELAY);
         } catch (error) {
             console.error("Whitelist error:", error);
-            const errorMessage = error instanceof Error ? error.message : "Whitelist process failed";
-            throw new TransactionError(errorMessage, 'whitelist');
         }
     }, [handleWhitelist]);
 
-    const processAttestationStep = useCallback(async (values: z.infer<typeof formSchema>): Promise<boolean> => {
+    const processAttestationStep = useCallback(async (values: z.infer<typeof formSchema>) => {
         try {
-            const attestSuccess = await handleAttest();
-            if (!attestSuccess) {
-                throw new TransactionError("Attestation process failed", 'attestation');
-            }
-
+            await handleAttest();
             await delay(ASYNC_DELAY);
-
+            
             // Verify phone number after attestation
             const verificationSuccess = await verifyPhoneNumber(values.phoneNumber, values.network);
             if (!verificationSuccess) {
-                throw new TransactionError("Phone number verification failed after attestation", 'attestation');
+                throw new ValidationError("Phone number verification failed");
             }
-
-            return true;
         } catch (error) {
             console.error("Attestation error:", error);
-            const errorMessage = error instanceof Error ? error.message : "Attestation process failed";
-            throw new TransactionError(errorMessage, 'attestation');
+            throw error;
         }
     }, [handleAttest, verifyPhoneNumber]);
 
-    const processClaimStep = useCallback(async (): Promise<boolean> => {
+    const processClaimStep = useCallback(async () => {
+        updateStepStatus('claim-ubi', 'loading');
         try {
-            const claimSuccess = await handleClaim();
-            if (claimSuccess) {
-                await delay(ASYNC_DELAY);
-                return true;
-            } else {
-                throw new TransactionError("Claim process failed", 'claim');
-            }
+            await handleClaim();
+            updateStepStatus('claim-ubi', 'success');
+            
         } catch (error) {
             console.error("Claim failed:", error);
-            const errorMessage = error instanceof Error ? error.message : "Claim process failed";
-            throw new TransactionError(errorMessage, 'claim');
-        }
-    }, [handleClaim]);
+            updateStepStatus('claim-ubi', 'error', "An error occurred during the claim process");
+            return    
+    }
+    }, [handleClaim, updateStepStatus]);
 
-    const processAirtimeTopup = useCallback(async (values: z.infer<typeof formSchema>, enteredAmount: number): Promise<boolean> => {
+    const processAirtimeTopup = useCallback(async (values: z.infer<typeof formSchema>, enteredAmount: number) => {
         const networkName = networks.find(net => net.id === values.network)?.name || '';
         const cleanedPhoneNumber = cleanPhoneNumber(values.phoneNumber);
 
@@ -375,15 +348,13 @@ export const useFreebiesLogic = () => {
                 return true;
             } else {
                 console.error("Top-up API Error:", data);
-                const errorMessage = data.error || "There was an issue processing your free airtime";
-                toast.error(errorMessage);
-                throw new TransactionError(errorMessage, 'topup');
+                toast.error(data.error || "There was an issue processing your free airtime. Our team has been notified.");
+                return false;
             }
         } catch (error) {
             console.error("Error during free airtime top-up:", error);
-            const errorMessage = error instanceof Error ? error.message : "There was an error processing your free airtime";
-            toast.error(errorMessage);
-            throw new TransactionError(errorMessage, 'topup');
+            toast.error("There was an error processing your free airtime. Our team has been notified and will resolve this shortly.");
+            return false;
         }
     }, [networks, cleanPhoneNumber, operatorRange]);
 
@@ -397,7 +368,7 @@ export const useFreebiesLogic = () => {
         setIsVerified(false);
     }, [form]);
 
-    // Main submission handler with proper error handling
+    // Main submission handler
     const onSubmit = useCallback(async (values: z.infer<typeof formSchema>) => {
         if (isProcessing || isClaiming) {
             console.log("Already processing, ignoring duplicate submission");
@@ -415,7 +386,7 @@ export const useFreebiesLogic = () => {
             toast.error("Please select a network provider first.");
             return;
         }
-
+        
         if (enteredAmount < operatorRange.min || enteredAmount > operatorRange.max) {
             toast.error(`Amount must be between ${operatorRange.min} and ${operatorRange.max} ${operatorRange.currency}`);
             return;
@@ -424,104 +395,66 @@ export const useFreebiesLogic = () => {
         const transactionId = generateTransactionId(address);
         setIsClaiming(true);
         openTransactionDialog("airtime", values.phoneNumber);
-        //check if embedded wallet balance is less than 0.00001 ETH
-        console.log(balance.toFixed(5), "ETH balance in embedded wallet");
 
-        const ensureSufficientBalance = async (stepName: string) => {
-            console.log(`Checking balance before ${stepName}:`, balance.toFixed(5), "ETH");
-            if (balance < 0.00003) {
-                console.log(`Insufficient balance for ${stepName}, dispensing ETH`);
-                try {
-                    await handleDispenseETH();
-                    await delay(2000);
-                } catch (ethError) {
-                    console.error(`Failed to dispense ETH for ${stepName}:`, ethError);
-                    throw new TransactionError(`Failed to get ETH for ${stepName}`, stepName);
-                }
-            }
-        };
-        const recoverExcessETH = async () => {
-            if (balance > 0.001) {
-                console.log(`Excess balance detected: ${balance.toFixed(5)} ETH`);
-                try {
-                    await handleDepositETH();
-                    await delay(2000);
-                } catch (ethError) {
-                    console.error(`Failed to deposit ETH for excess recovery:`, ethError);
-                    throw new TransactionError(`Failed to recover excess ETH`, 'recover');
-                }
-            }
-        };
+        try {
+                        // Step 1: Process whitelist
+            await processWhitelistStep();
+
+            // Step 2: Process attestation and verification
+            await processAttestationStep(values);
+
+            // Step 3: Process claim
+            await processClaimStep();
+
+        } catch (error) {
+            console.error("Error in submission flow:", error);
+            toast.error(error instanceof Error ? error.message : "There was an unexpected error processing your request.");
+            // Update any loading step to error state
+            return;
+        } 
+
 
         try {
 
-            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
-            await processWhitelistStep();            // Step 1: Process whitelist - HALT if fails
+             // Step 1: Process whitelist
             await processWhitelistStep();
 
-            // Step 4: Process airtime top-up - HALT if fails
-            await processAirtimeTopup(values, enteredAmount);
+            // Step 2: Process attestation and verification
+            await processAttestationStep(values);
 
-            // Only reset form if ALL steps succeed
-            closeTransactionDialog();
-           // resetFormAfterSuccess();
+            // Step 3: Process claim
+            await processClaimStep();
+
+            // Step 4: Process airtime top-up
+            const topupSuccess = await processAirtimeTopup(values, enteredAmount);
+            
+            if (topupSuccess) {
+                closeTransactionDialog();
+                resetFormAfterSuccess();
+            }
 
         } catch (error) {
-            console.error("Transaction failed:", error);
-
-            // Determine which step failed and show appropriate error
-            const errorMessage = error instanceof TransactionError
-                ? `${error.step} failed: ${error.message}`
-                : error instanceof Error
-                    ? error.message
-                    : "An unexpected error occurred";
-
-            toast.error(`Transaction halted: ${errorMessage}`);
-
-            // Keep the dialog open to show the error state
-            // Don't reset the form so user can see what happened
-
+            console.error("Error in submission flow:", error);
+            toast.error(error instanceof Error ? error.message : "There was an unexpected error processing your request.");
+            
+            // Update any loading step to error state
+            const loadingStepIndex = transactionSteps.findIndex(step => step.status === 'loading');
+            if (loadingStepIndex !== -1) {
+                updateStepStatus(
+                    transactionSteps[loadingStepIndex].id,
+                    'error',
+                    error instanceof Error ? error.message : 'Unknown error'
+                );
+            }
         } finally {
             setIsClaiming(false);
         }
     }, [
-        isProcessing,
-        isClaiming,
-        address,
-        operatorRange,
-        balance,
-        handleDispenseETH,
-        generateTransactionId,
+        isProcessing, 
+        isClaiming, 
+        address, 
+        operatorRange, 
+        generateTransactionId, 
         openTransactionDialog,
         processWhitelistStep,
         processAttestationStep,
@@ -529,6 +462,8 @@ export const useFreebiesLogic = () => {
         processAirtimeTopup,
         closeTransactionDialog,
         resetFormAfterSuccess,
+        transactionSteps,
+        updateStepStatus
     ]);
 
     // Effects
@@ -538,7 +473,7 @@ export const useFreebiesLogic = () => {
 
     useEffect(() => {
         fetchNetworkProviders();
-
+        
         // Cleanup function
         return () => {
             if (abortControllerRef.current) {
@@ -589,7 +524,7 @@ export const useFreebiesLogic = () => {
         handleWhitelist,
         handleAttest,
         handleClaim,
-
+        
         // Utility functions (exposed for testing or external use)
         cleanPhoneNumber,
         generateTransactionId,
